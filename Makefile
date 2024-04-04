@@ -199,18 +199,37 @@ $(foreach image,$(GEN_IMAGES),$(eval $(call ShortcutRule,$(image),$(IMAGEODIR)))
 
 $(foreach image,$(GEN_IMAGES),$(eval $(call MakeImage,$(basename $(image)))))
 
-#############################################################
-# Recursion Magic - Don't touch this!!
-#
-# Each subtree potentially has an include directory
-#   corresponding to the common APIs applicable to modules
-#   rooted at that subtree. Accordingly, the INCLUDE PATH
-#   of a module can only contain the include directories up
-#   its parent path, and not its siblings
-#
-# Required for each makefile to inherit from the parent
-#
 
-INCLUDES := $(INCLUDES) -I $(PDIR)include -I $(PDIR)include/$(TARGET) -I $(PDIR)driver_lib/include
-PDIR := ../$(PDIR)
-sinclude $(PDIR)Makefile
+###########################################################
+
+# tool macros
+CC ?= # FILL: the compiler
+CFLAGS := # FILL: compile flags
+
+# path macros
+OUT_PATH := output
+BIN_PATH := bin
+OBJ_PATH := obj
+SRC_PATH := src
+
+
+
+# Project folder structure:
+# root/
+# | .git
+# | Makefile
+# | src/
+# | | include/
+# | | main.c
+# | | drivers/
+# | | | include/
+# | | | HAL_drivers/
+# | | | | include/
+# | | | CMSIS/
+# | | | | include/
+# | output/
+# | | bin/
+# | | | a.elf
+# | | obj/
+# | | | main.o
+# | | | main.d
