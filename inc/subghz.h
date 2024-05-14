@@ -19,9 +19,11 @@ typedef enum
   RADIO_SWITCH_RFO_HP = 3,
 }BSP_RADIO_Switch_TypeDef;
 
+void MX_SUBGHZ_Init(void);
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz);
+void subghz_radio_getstatus(void);
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz);
-HAL_StatusTypeDef continuous_rx(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_StatusTypeDef continuous_rx(void);
 int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config);
 
 #endif /* INC_SUBGHZ_H_ */

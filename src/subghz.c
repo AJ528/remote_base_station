@@ -6,7 +6,13 @@
  */
 
 #include "subghz.h"
+
 #include "stm32wlxx_ll_gpio.h"
+#include "stm32wlxx_ll_bus.h"
+#include "stm32wlxx_ll_rcc.h"
+#include "stm32wlxx_ll_utils.h"
+
+#include "mprintf.h"
 
 #include <stdint.h>
 
@@ -59,6 +65,8 @@ struct __attribute__((__packed__)) sRadioParams {
 	uint8_t Whitening;
 };
 
+static SUBGHZ_HandleTypeDef hsubghz;
+
 struct sRadioParams params = {
 	.PbLength = 32,
 	.PbDetLength = 0x07,
@@ -73,6 +81,33 @@ struct sRadioParams params = {
 
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
 HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
+
+void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz);
+void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz);
+
+static void MX_NVIC_Init(void);
+
+/**
+  * @brief SUBGHZ Initialization Function
+  * @param None
+  * @retval None
+  */
+void MX_SUBGHZ_Init(void)
+{
+  hsubghz.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
+  if (HAL_SUBGHZ_Init(&hsubghz) != HAL_OK)
+  {
+    // Error_Handler();
+  }
+  if(subghz_init(&hsubghz) != HAL_OK)
+  {
+    // Error_Handler();
+  }
+
+  MX_NVIC_Init();
+
+}
+
 
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 {
@@ -161,6 +196,29 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 	return HAL_OK;
 }
 
+void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz)
+{
+    LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
+    LL_RCC_HSE_EnableTcxo();
+    LL_RCC_HSE_Enable();
+
+    while (LL_RCC_HSE_IsReady() == 0)
+    {}
+}
+
+void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz)
+{
+    LL_APB3_GRP1_DisableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
+    NVIC_DisableIRQ(SUBGHZ_Radio_IRQn);
+}
+
+void subghz_radio_getstatus(void)
+{
+	uint8_t RadioResult = 0x00;
+	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
+  	printf_("RR: 0x%02x\n", RadioResult);
+}
+
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFE};
@@ -175,12 +233,12 @@ HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
 	  uint8_t result = HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
 	  if (result != HAL_OK)
 	  {
-		printf("error: 0x%02x\n", result);
+		printf_("error: 0x%02x\n", result);
 	  }
-	  printf("RR: 0x%02x\n", RadioResult);
+	  printf_("RR: 0x%02x\n", RadioResult);
 
-	  printf("delay\n");
-	  HAL_Delay(500);
+	  printf_("delay\n");
+	  LL_mDelay(500);
 
 	  /* Format Mode and Status receive from SUBGHZ Radio */
 	  RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
@@ -188,10 +246,10 @@ HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
 	while (RadioMode != RADIO_MODE_STANDBY_RC);
 }
 
-HAL_StatusTypeDef continuous_rx(SUBGHZ_HandleTypeDef *hsubghz)
+HAL_StatusTypeDef continuous_rx(void)
 {
 	uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFF};
-	return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RX, RadioCmd, 3));
+	return(HAL_SUBGHZ_ExecSetCmd(&hsubghz, RADIO_SET_RX, RadioCmd, 3));
 }
 
 /**
@@ -275,4 +333,20 @@ HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 	buf[7] = ( tempVal& 0xFF );				// FDev
 
 	return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_MODULATIONPARAMS, buf, 8));
+}
+
+/**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* SUBGHZ_Radio_IRQn interrupt configuration */
+  NVIC_SetPriority(SUBGHZ_Radio_IRQn, 0);
+  NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
+}
+
+void SUBGHZ_Radio_IRQHandler(void)
+{
+  HAL_SUBGHZ_IRQHandler(&hsubghz);
 }
