@@ -1,37 +1,39 @@
-#include "stm32wlxx_hal.h"
-
-// #include "core_cm4.h"
 #include "subghz.h"
 #include "mprintf.h"
+
+#include "stm32wlxx_hal_subghz.h"
 
 #include "stm32wlxx_ll_system.h"
 #include "stm32wlxx_ll_pwr.h"
 #include "stm32wlxx_ll_rcc.h"
 #include "stm32wlxx_ll_bus.h"
+#include "stm32wlxx_ll_gpio.h"
+#include "stm32wlxx_ll_exti.h"
+#include "stm32wlxx_ll_utils.h"
 
 
-#define LED1_Pin GPIO_PIN_15
+#define LED1_Pin LL_GPIO_PIN_15
 #define LED1_GPIO_Port GPIOB
-#define LED2_Pin GPIO_PIN_9
+#define LED2_Pin LL_GPIO_PIN_9
 #define LED2_GPIO_Port GPIOB
-#define RF_SW_CTRL3_Pin GPIO_PIN_3
+#define RF_SW_CTRL3_Pin LL_GPIO_PIN_3
 #define RF_SW_CTRL3_GPIO_Port GPIOC
-#define BUTTON_SW1_Pin GPIO_PIN_0
+#define BUTTON_SW1_Pin LL_GPIO_PIN_0
 #define BUTTON_SW1_GPIO_Port GPIOA
-#define RF_SW_CTRL2_Pin GPIO_PIN_5
+#define RF_SW_CTRL2_Pin LL_GPIO_PIN_5
 #define RF_SW_CTRL2_GPIO_Port GPIOC
-#define RF_SW_CTRL1_Pin GPIO_PIN_4
+#define RF_SW_CTRL1_Pin LL_GPIO_PIN_4
 #define RF_SW_CTRL1_GPIO_Port GPIOC
-#define BUTTON_SW3_Pin GPIO_PIN_6
+#define BUTTON_SW3_Pin LL_GPIO_PIN_6
 #define BUTTON_SW3_GPIO_Port GPIOC
-#define BUTTON_SW2_Pin GPIO_PIN_1
+#define BUTTON_SW2_Pin LL_GPIO_PIN_1
 #define BUTTON_SW2_GPIO_Port GPIOA
-#define LED3_Pin GPIO_PIN_11
+#define LED3_Pin LL_GPIO_PIN_11
 #define LED3_GPIO_Port GPIOB
-#define T_VCP_RX_Pin GPIO_PIN_3
+#define T_VCP_RX_Pin LL_GPIO_PIN_3
 #define T_VCP_RX_GPIO_Port GPIOA
-#define T_VCP_RXA2_Pin GPIO_PIN_2
-#define T_VCP_RXA2_GPIO_Port GPIOA
+#define T_VCP_TX_Pin LL_GPIO_PIN_2
+#define T_VCP_TX_GPIO_Port GPIOA
 
 
 
@@ -54,12 +56,13 @@ void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz);
 
 int main(void)
 {
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
   /* Configure the system clock */
   SystemClock_Config();
+
+  LL_RCC_ClocksTypeDef clk_struct;
+
+  LL_RCC_GetSystemClocksFreq(&clk_struct);
+  LL_Init1msTick(clk_struct.HCLK1_Frequency);
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -81,27 +84,20 @@ int main(void)
 	RadioResult = 0x00;
 	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
   	printf_("RR: 0x%02x\n", RadioResult);
-  	HAL_Delay(1000);
+  	LL_mDelay(1000);
 
   }
 }
 
 void SystemClock_Config(void)
 {
-  // RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  // RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-
-  // SET_BIT(PWR->CR1, PWR_CR1_DBP);
-  // LL_RCC_LSE_SetDriveCapability(RCC_LSEDRIVE_LOW);
-
-    LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
+  LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
   while(LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
   {
   }
 
   /** Configure the main internal regulator output voltage
   */
-  // __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
   LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
   while(LL_PWR_IsActiveFlag_VOS() == 1); // delay until VOS flag is 0
 
@@ -119,42 +115,10 @@ void SystemClock_Config(void)
   while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_HSE)
   {
   }
-
-
-  // /** Initializes the CPU, AHB and APB buses clocks
-  // */
-  // RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
-  // RCC_OscInitStruct.LSEState = RCC_LSE_ON;
-  // RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-  // RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
-  // RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
-  // RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
-  // if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  // {
-  //   Error_Handler();
-  // }
-
-  // /** Configure the SYSCLKSource, HCLK, PCLK1 and PCLK2 clocks dividers
-  // */
-  // RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK3|RCC_CLOCKTYPE_HCLK
-  //                             |RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1
-  //                             |RCC_CLOCKTYPE_PCLK2;
-  // RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
-  // RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  // RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  // RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  // RCC_ClkInitStruct.AHBCLK3Divider = RCC_SYSCLK_DIV1;
-
-  // if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
-  // {
-  //   Error_Handler();
-  // }
-
 }
 
 void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz)
 {
-    // __HAL_RCC_SUBGHZSPI_CLK_ENABLE();
     LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
     LL_RCC_HSE_EnableTcxo();
     LL_RCC_HSE_Enable();
@@ -165,7 +129,6 @@ void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz)
 
 void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz)
 {
-    // __HAL_RCC_SUBGHZSPI_CLK_DISABLE();
     LL_APB3_GRP1_DisableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
     NVIC_DisableIRQ(SUBGHZ_Radio_IRQn);
 }
@@ -178,7 +141,6 @@ static void MX_NVIC_Init(void)
 {
   /* SUBGHZ_Radio_IRQn interrupt configuration */
   NVIC_SetPriority(SUBGHZ_Radio_IRQn, 0);
-
   NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
 }
 
@@ -202,7 +164,7 @@ void MX_SUBGHZ_Init(void)
 
 static void MX_GPIO_Init(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
@@ -210,44 +172,58 @@ static void MX_GPIO_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED1_Pin|LED2_Pin|LED3_Pin, GPIO_PIN_RESET);
+  LL_GPIO_ResetOutputPin(GPIOB, LED1_Pin|LED2_Pin|LED3_Pin);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, RF_SW_CTRL3_Pin|RF_SW_CTRL2_Pin|RF_SW_CTRL1_Pin, GPIO_PIN_RESET);
+  LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL3_Pin|RF_SW_CTRL2_Pin|RF_SW_CTRL1_Pin);
 
   /*Configure GPIO pins : LED1_Pin LED2_Pin LED3_Pin */
   GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|LED3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RF_SW_CTRL3_Pin RF_SW_CTRL2_Pin RF_SW_CTRL1_Pin */
   GPIO_InitStruct.Pin = RF_SW_CTRL3_Pin|RF_SW_CTRL2_Pin|RF_SW_CTRL1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+  LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : BUTTON_SW1_Pin BUTTON_SW2_Pin */
   GPIO_InitStruct.Pin = BUTTON_SW1_Pin|BUTTON_SW2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE0);
+  LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_0);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_0);
+
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTA, LL_SYSCFG_EXTI_LINE1);
+  LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_1);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_1);
+
+  LL_GPIO_Init(BUTTON_SW1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : BUTTON_SW3_Pin */
   GPIO_InitStruct.Pin = BUTTON_SW3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(BUTTON_SW3_GPIO_Port, &GPIO_InitStruct);
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
 
-  /*Configure GPIO pins : T_VCP_RX_Pin T_VCP_RXA2_Pin */
-  GPIO_InitStruct.Pin = T_VCP_RX_Pin|T_VCP_RXA2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  LL_SYSCFG_SetEXTISource(LL_SYSCFG_EXTI_PORTC, LL_SYSCFG_EXTI_LINE6);
+  LL_EXTI_EnableFallingTrig_0_31(LL_EXTI_LINE_6);
+  LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_6);
+
+  LL_GPIO_Init(BUTTON_SW3_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : T_VCP_RX_Pin T_VCP_TX_Pin */
+  GPIO_InitStruct.Pin = T_VCP_RX_Pin|T_VCP_TX_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_7;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
 
 int32_t putchar_(char c)

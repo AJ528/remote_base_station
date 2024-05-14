@@ -8,7 +8,7 @@
 #ifndef INC_SUBGHZ_H_
 #define INC_SUBGHZ_H_
 
-#include "stm32wlxx_hal.h"
+#include "stm32wlxx_hal_subghz.h"
 #include <stdint.h>
 
 typedef enum

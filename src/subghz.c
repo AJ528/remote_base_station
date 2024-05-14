@@ -6,16 +6,15 @@
  */
 
 #include "subghz.h"
-#include "stm32wlxx_hal.h"
+#include "stm32wlxx_ll_gpio.h"
 
 #include <stdint.h>
-// #include <stdio.h>
 
-#define RF_SW_CTRL3_Pin GPIO_PIN_3
+#define RF_SW_CTRL3_Pin LL_GPIO_PIN_3
 #define RF_SW_CTRL3_GPIO_Port GPIOC
-#define RF_SW_CTRL2_Pin GPIO_PIN_5
+#define RF_SW_CTRL2_Pin LL_GPIO_PIN_5
 #define RF_SW_CTRL2_GPIO_Port GPIOC
-#define RF_SW_CTRL1_Pin GPIO_PIN_4
+#define RF_SW_CTRL1_Pin LL_GPIO_PIN_4
 #define RF_SW_CTRL1_GPIO_Port GPIOC
 
 
@@ -212,33 +211,28 @@ int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
     case RADIO_SWITCH_OFF:
     {
       /* Turn off switch */
-      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_Port, RF_SW_CTRL3_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_Port, RF_SW_CTRL1_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(RF_SW_CTRL2_GPIO_Port, RF_SW_CTRL2_Pin, GPIO_PIN_RESET);
+	  LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL2_Pin | RF_SW_CTRL3_Pin);
       break;
     }
     case RADIO_SWITCH_RX:
     {
       /*Turns On in Rx Mode the RF Switch */
-      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_Port, RF_SW_CTRL3_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_Port, RF_SW_CTRL1_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(RF_SW_CTRL2_GPIO_Port, RF_SW_CTRL2_Pin, GPIO_PIN_RESET);
+	  LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL3_Pin);
+	  LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL2_Pin);
       break;
     }
     case RADIO_SWITCH_RFO_LP:
     {
       /*Turns On in Tx Low Power the RF Switch */
-      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_Port, RF_SW_CTRL3_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_Port, RF_SW_CTRL1_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(RF_SW_CTRL2_GPIO_Port, RF_SW_CTRL2_Pin, GPIO_PIN_SET);
+	  LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL2_Pin | RF_SW_CTRL3_Pin);
       break;
     }
     case RADIO_SWITCH_RFO_HP:
     {
       /*Turns On in Tx High Power the RF Switch */
-      HAL_GPIO_WritePin(RF_SW_CTRL3_GPIO_Port, RF_SW_CTRL3_Pin, GPIO_PIN_SET);
-      HAL_GPIO_WritePin(RF_SW_CTRL1_GPIO_Port, RF_SW_CTRL1_Pin, GPIO_PIN_RESET);
-      HAL_GPIO_WritePin(RF_SW_CTRL2_GPIO_Port, RF_SW_CTRL2_Pin, GPIO_PIN_SET);
+	  LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL3_Pin);
+	  LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL1_Pin);
+	  LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL2_Pin);
       break;
     }
     default:

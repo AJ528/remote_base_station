@@ -131,10 +131,12 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32wlxx_hal.h"
+#include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_exti.h"
 #include "stm32wlxx_ll_pwr.h"
 #include "stm32wlxx_ll_rcc.h"
+#include "stm32_assert.h"
+#include <stddef.h>
 
 /** @addtogroup STM32WLxx_HAL_Driver
   * @{
@@ -144,6 +146,7 @@
   * @brief SUBGHZ HAL module driver
   * @{
   */
+#define HAL_SUBGHZ_MODULE_ENABLED
 #ifdef HAL_SUBGHZ_MODULE_ENABLED
 
 /* Private typedef -----------------------------------------------------------*/
