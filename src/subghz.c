@@ -54,6 +54,8 @@ do                                                                           \
   channel = (uint32_t) ((((uint64_t) freq)<<25)/(XTAL_FREQ) );               \
 }while( 0 )
 
+
+
 struct __attribute__((__packed__)) sRadioParams {
 	uint16_t PbLength;
 	uint8_t PbDetLength;
@@ -82,10 +84,7 @@ struct sRadioParams params = {
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
 HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
 
-void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz);
-void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz);
-
-static void MX_NVIC_Init(void);
+static void subghz_irq_init(void);
 
 /**
   * @brief SUBGHZ Initialization Function
@@ -94,17 +93,25 @@ static void MX_NVIC_Init(void);
   */
 void MX_SUBGHZ_Init(void)
 {
-  hsubghz.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
-  if (HAL_SUBGHZ_Init(&hsubghz) != HAL_OK)
-  {
-    // Error_Handler();
-  }
-  if(subghz_init(&hsubghz) != HAL_OK)
-  {
-    // Error_Handler();
-  }
+	LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
+    LL_RCC_HSE_EnableTcxo();
+    LL_RCC_HSE_Enable();
 
-  MX_NVIC_Init();
+    while (LL_RCC_HSE_IsReady() == 0)
+    {}
+
+  	hsubghz.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
+
+	if (HAL_SUBGHZ_Init(&hsubghz) != HAL_OK)
+	{
+		// Error_Handler();
+	}
+	if(subghz_init(&hsubghz) != HAL_OK)
+	{
+		// Error_Handler();
+	}
+
+	subghz_irq_init();
 
 }
 
@@ -196,21 +203,11 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 	return HAL_OK;
 }
 
-void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef* hsubghz)
-{
-    LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
-    LL_RCC_HSE_EnableTcxo();
-    LL_RCC_HSE_Enable();
-
-    while (LL_RCC_HSE_IsReady() == 0)
-    {}
-}
-
-void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz)
-{
-    LL_APB3_GRP1_DisableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
-    NVIC_DisableIRQ(SUBGHZ_Radio_IRQn);
-}
+// void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz)
+// {
+//     LL_APB3_GRP1_DisableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
+//     NVIC_DisableIRQ(SUBGHZ_Radio_IRQn);
+// }
 
 void subghz_radio_getstatus(void)
 {
@@ -339,7 +336,7 @@ HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
   * @brief NVIC Configuration.
   * @retval None
   */
-static void MX_NVIC_Init(void)
+static void subghz_irq_init(void)
 {
   /* SUBGHZ_Radio_IRQn interrupt configuration */
   NVIC_SetPriority(SUBGHZ_Radio_IRQn, 0);
