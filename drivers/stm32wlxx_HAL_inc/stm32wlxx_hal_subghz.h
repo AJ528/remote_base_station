@@ -25,7 +25,6 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-// #include "stm32wlxx_hal_def.h"
 
 /* Include low level driver */
 #include "stm32wlxx_ll_spi.h"
@@ -52,48 +51,26 @@ typedef enum
 
 // /* Exported macros -----------------------------------------------------------*/
 
-#define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
+// #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
 #define HAL_MAX_DELAY      0xFFFFFFFFU
 
-#if (USE_RTOS == 1)
-  /* Reserved for future use */
-  #error " USE_RTOS should be 0 in the current HAL release "
-#else
-  #define __HAL_LOCK(__HANDLE__)                                           \
-                                do{                                        \
-                                    if((__HANDLE__)->Lock == HAL_LOCKED)   \
-                                    {                                      \
-                                       return HAL_BUSY;                    \
-                                    }                                      \
-                                    else                                   \
-                                    {                                      \
-                                       (__HANDLE__)->Lock = HAL_LOCKED;    \
-                                    }                                      \
+#define __HAL_LOCK(__HANDLE__)                                           \
+                              do{                                        \
+                                  if((__HANDLE__)->Lock == HAL_LOCKED)   \
+                                  {                                      \
+                                      return HAL_BUSY;                    \
+                                  }                                      \
+                                  else                                   \
+                                  {                                      \
+                                      (__HANDLE__)->Lock = HAL_LOCKED;    \
+                                  }                                      \
+                                }while (0)
+
+#define __HAL_UNLOCK(__HANDLE__)                                          \
+                                do{                                       \
+                                    (__HANDLE__)->Lock = HAL_UNLOCKED;    \
                                   }while (0)
-
-  #define __HAL_UNLOCK(__HANDLE__)                                          \
-                                  do{                                       \
-                                      (__HANDLE__)->Lock = HAL_UNLOCKED;    \
-                                    }while (0)
-#endif /* USE_RTOS */
-
-
-#if defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050) /* ARM Compiler V6 */
-  #ifndef __weak
-    #define __weak  __attribute__((weak))
-  #endif
-  #ifndef __packed
-    #define __packed  __attribute__((packed))
-  #endif
-#elif defined ( __GNUC__ ) && !defined (__CC_ARM) /* GNU Compiler */
-  #ifndef __weak
-    #define __weak   __attribute__((weak))
-  #endif /* __weak */
-  #ifndef __packed
-    #define __packed __attribute__((__packed__))
-  #endif /* __packed */
-#endif /* __GNUC__ */
 
 /** @addtogroup STM32WLxx_HAL_Driver
   * @{
@@ -141,11 +118,7 @@ typedef enum
 /**
   * @brief  SUBGHZ handle Structure definition
   */
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-typedef struct __SUBGHZ_HandleTypeDef
-#else
 typedef struct
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 {
   SUBGHZ_InitTypeDef                        Init;       /*!< SUBGHZ communication parameters             */
 
@@ -157,47 +130,7 @@ typedef struct
 
   __IO uint32_t                             ErrorCode;  /*!< SUBGHZ Error code                           */
 
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-  void (* TxCpltCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);                /*!< SUBGHZ Tx Completed callback          */
-  void (* RxCpltCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);                /*!< SUBGHZ Rx Completed callback          */
-  void (* PreambleDetectedCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);      /*!< SUBGHZ Preamble detected callback     */
-  void (* SyncWordValidCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);         /*!< SUBGHZ Synchro word valid callback    */
-  void (* HeaderValidCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);           /*!< SUBGHZ Header valid callback          */
-  void (* HeaderErrorCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);           /*!< SUBGHZ Header error callback          */
-  void (* CRCErrorCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);              /*!< SUBGHZ CRC Error callback             */
-  void (* CADStatusCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz, HAL_SUBGHZ_CadStatusTypeDef cadstatus); /*!< SUBGHZ CAD Status callback            */
-  void (* RxTxTimeoutCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);           /*!< SUBGHZ Rx Tx Timeout callback         */
-  void (* MspInitCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);               /*!< SUBGHZ Msp Init callback              */
-  void (* MspDeInitCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);             /*!< SUBGHZ Msp DeInit callback            */
-  void (* LrFhssHopCallback)(struct __SUBGHZ_HandleTypeDef *hsubghz);             /*!< SUBGHZ LR FHSS Hop callback           */
-#endif  /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 } SUBGHZ_HandleTypeDef;
-
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-/**
-  * @brief  HAL SUBGHZ Callback ID enumeration definition
-  */
-typedef enum
-{
-  HAL_SUBGHZ_TX_COMPLETE_CB_ID              = 0x00U,    /*!< SUBGHZ Tx Completed callback ID             */
-  HAL_SUBGHZ_RX_COMPLETE_CB_ID              = 0x01U,    /*!< SUBGHZ Rx Completed callback ID             */
-  HAL_SUBGHZ_PREAMBLE_DETECTED_CB_ID        = 0x02U,    /*!< SUBGHZ Preamble detected callback ID        */
-  HAL_SUBGHZ_SYNCWORD_VALID_CB_ID           = 0x03U,    /*!< SUBGHZ Synchro word valid callback ID       */
-  HAL_SUBGHZ_HEADER_VALID_CB_ID             = 0x04U,    /*!< SUBGHZ Header valid callback ID             */
-  HAL_SUBGHZ_HEADER_ERROR_CB_ID             = 0x05U,    /*!< SUBGHZ Header error callback ID             */
-  HAL_SUBGHZ_CRC_ERROR_CB_ID                = 0x06U,    /*!< SUBGHZ CRC error callback ID                */
-  HAL_SUBGHZ_RX_TX_TIMEOUT_CB_ID            = 0x07U,    /*!< SUBGHZ Rx Tx timeout callback ID            */
-  HAL_SUBGHZ_MSPINIT_CB_ID                  = 0x08U,    /*!< SUBGHZ Msp Init callback ID                 */
-  HAL_SUBGHZ_MSPDEINIT_CB_ID                = 0x09U,    /*!< SUBGHZ Msp DeInit callback ID               */
-  HAL_SUBGHZ_LR_FHSS_HOP_CB_ID              = 0x0AU,    /*!< SUBGHZ LR FHSS Hop callback ID              */
-} HAL_SUBGHZ_CallbackIDTypeDef;
-
-/**
-  * @brief  HAL SUBGHZ Callback pointer definition
-  */
-typedef  void (*pSUBGHZ_CallbackTypeDef)(SUBGHZ_HandleTypeDef *hsubghz); /*!< pointer to an SUBGHZ callback function */
-typedef  void (*pSUBGHZ_CadStatusCallbackTypeDef)(SUBGHZ_HandleTypeDef *hsubghz, HAL_SUBGHZ_CadStatusTypeDef cadstatus); /*!< pointer to an CAD Status callback function */
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 
 /*
  * @brief  HAL SUBGHZ Radio Set Command enumeration definition
@@ -266,9 +199,6 @@ typedef enum
 #define HAL_SUBGHZ_ERROR_NONE               (0x00000000U)   /*!< No error                         */
 #define HAL_SUBGHZ_ERROR_TIMEOUT            (0x00000001U)   /*!< Timeout Error                    */
 #define HAL_SUBGHZ_ERROR_RF_BUSY            (0x00000002U)   /*!< RF Busy Error                    */
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-#define HAL_SUBGHZ_ERROR_INVALID_CALLBACK   (0x00000080U)   /*!< Invalid Callback error           */
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 /**
   * @}
   */
@@ -318,38 +248,6 @@ typedef enum
 #define SUBGHZ_RADIO_READ_REGISTER          0x1DU
 #define SUBGHZ_RADIO_WRITE_BUFFER           0x0EU
 #define SUBGHZ_RADIO_READ_BUFFER            0x1EU
-/**
-  * @}
-  */
-
-
-/* Exported macros -----------------------------------------------------------*/
-/** @defgroup SUBGHZ_Exported_Macros SUBGHZ Exported Macros
-  * @{
-  */
-
-/** @brief  Reset SUBGHZ handle state.
-  * @param  __HANDLE__ specifies the SUBGHZ Handle.
-  * @retval None
-  */
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__)  \
-  do{                                                \
-    (__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET;    \
-    (__HANDLE__)->MspInitCallback = NULL;            \
-    (__HANDLE__)->MspDeInitCallback = NULL;          \
-  } while(0U)
-
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE_RF_READY(__HANDLE__)  \
-  do{                                                         \
-    (__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET_RF_READY;    \
-    (__HANDLE__)->MspInitCallback = NULL;                     \
-    (__HANDLE__)->MspDeInitCallback = NULL;                   \
-  } while(0U)
-#else
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE(__HANDLE__)          ((__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET)
-#define __HAL_SUBGHZ_RESET_HANDLE_STATE_RF_READY(__HANDLE__) ((__HANDLE__)->State = HAL_SUBGHZ_STATE_RESET_RF_READY)
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 /**
   * @}
   */
@@ -407,20 +305,6 @@ typedef enum
 /* Initialization/de-initialization functions  ********************************/
 HAL_StatusTypeDef HAL_SUBGHZ_Init(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef HAL_SUBGHZ_DeInit(SUBGHZ_HandleTypeDef *hsubghz);
-void              HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef *hsubghz);
-void              HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef *hsubghz);
-
-/* Callbacks Register/UnRegister functions  ***********************************/
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-HAL_StatusTypeDef HAL_SUBGHZ_RegisterCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                              HAL_SUBGHZ_CallbackIDTypeDef CallbackID,
-                                              pSUBGHZ_CallbackTypeDef pCallback);
-HAL_StatusTypeDef HAL_SUBGHZ_UnRegisterCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                                HAL_SUBGHZ_CallbackIDTypeDef CallbackID);
-HAL_StatusTypeDef HAL_SUBGHZ_RegisterCadStatusCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                                       pSUBGHZ_CadStatusCallbackTypeDef pCallback);
-HAL_StatusTypeDef HAL_SUBGHZ_UnRegisterCadStatusCallback(SUBGHZ_HandleTypeDef *hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 /**
   * @}
   */
@@ -446,16 +330,6 @@ HAL_StatusTypeDef HAL_SUBGHZ_WriteRegister(SUBGHZ_HandleTypeDef *hsubghz, uint16
 HAL_StatusTypeDef HAL_SUBGHZ_ReadRegister(SUBGHZ_HandleTypeDef *hsubghz, uint16_t Address, uint8_t *pValue);
 
 void HAL_SUBGHZ_IRQHandler(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_TxCpltCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_RxCpltCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_PreambleDetectedCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_SyncWordValidCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_HeaderValidCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_HeaderErrorCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_CRCErrorCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_CADStatusCallback(SUBGHZ_HandleTypeDef *hsubghz, HAL_SUBGHZ_CadStatusTypeDef cadstatus);
-void HAL_SUBGHZ_RxTxTimeoutCallback(SUBGHZ_HandleTypeDef *hsubghz);
-void HAL_SUBGHZ_LrFhssHopCallback(SUBGHZ_HandleTypeDef *hsubghz);
 /**
   * @}
   */

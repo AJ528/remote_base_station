@@ -59,75 +59,6 @@
     =====================================
     [..]
       (+) @ref __HAL_SUBGHZ_RESET_HANDLE_STATE: Reset the SUBGHZ handle state
-
-#if defined(GENERATOR_CALLBACK_REGISTERING_PRESENT)
-     *** SUBGHZ Callback registration  ***
-     =====================================
-
-    [..]
-     The compilation flag USE_HAL_SUBGHZ_REGISTER_CALLBACKS when set to 1
-     allows the user to configure dynamically the driver callbacks.
-     Use Functions @ref HAL_SUBGHZ_RegisterCallback() or @ref HAL_SUBGHZ_RegisterAddrCallback()
-     to register an interrupt callback.
-
-    [..]
-     Function @ref HAL_SUBGHZ_RegisterCallback() allows to register following callbacks:
-       (+) TxCpltCallback           : callback for Tx Completed.
-       (+) RxCpltCallback           : callback for Rx Completed.
-       (+) PreambleDetectedCallback : callback for Preamble detected.
-       (+) SyncWordValidCallback    : callback for Synchro word valid.
-       (+) HeaderValidCallback      : callback for Header valid.
-       (+) HeaderErrorCallback      : callback for Header error.
-       (+) CRCErrorCallback         : callback for CRC Error.
-       (+) RxTxTimeoutCallback      : callback for Rx Tx Timeout.
-       (+) MspInitCallback          : callback for Msp Init.
-       (+) MspDeInitCallback        : callback for Msp DeInit.
-       (+) LrFhssHopCallback        : callback for LoRa Frequency Hopping Spread Spectrum Hopping.
-     This function takes as parameters the HAL peripheral handle, the Callback ID
-     and a pointer to the user callback function.
-    [..]
-     For specific callback CADStatusCallback use dedicated register callbacks :
-     @ref HAL_SUBGHZ_RegisterCadStatusCallback().
-    [..]
-     Use function @ref HAL_SUBGHZ_UnRegisterCallback to reset a callback to the default
-     weak function.
-     @ref HAL_SUBGHZ_UnRegisterCallback takes as parameters the HAL peripheral handle,
-     and the Callback ID.
-     This function allows to reset following callbacks:
-       (+) TxCpltCallback           : callback for Tx Completed.
-       (+) RxCpltCallback           : callback for Rx Completed.
-       (+) PreambleDetectedCallback : callback for Preamble detected.
-       (+) SyncWordValidCallback    : callback for Synchro word valid.
-       (+) HeaderValidCallback      : callback for Header valid.
-       (+) HeaderErrorCallback      : callback for Header error.
-       (+) CRCErrorCallback         : callback for CRC Error.
-       (+) RxTxTimeoutCallback      : callback for Rx Tx Timeout.
-       (+) MspInitCallback          : callback for Msp Init.
-       (+) MspDeInitCallback        : callback for Msp DeInit.
-       (+) LrFhssHopCallback        : callback for LoRa Frequency Hopping Spread Spectrum Hopping.
-    [..]
-     For specific callback CADStatusCallback use dedicated register callbacks :
-     @ref HAL_SUBGHZ_UnRegisterCadStatusCallback().
-    [..]
-     MspInit and MspDeInit functions are reset to the legacy weak functions in the
-     @ref HAL_SUBGHZ_Init()/ @ref HAL_SUBGHZ_DeInit() only when these callbacks are null
-     (not registered beforehand).
-     If MspInit or MspDeInit are not null, the @ref HAL_SUBGHZ_Init()/ @ref HAL_SUBGHZ_DeInit()
-     keep and use the user MspInit/MspDeInit callbacks (registered beforehand) whatever the state.
-
-    [..]
-     Callbacks for MspInit/MspDeInit functions can be registered/unregistered
-     in @ref HAL_SUBGHZ_STATE_READY or @ref HAL_SUBGHZ_STATE_RESET state,
-     thus registered (user) MspInit/DeInit callbacks can be used during the Init/DeInit.
-     Then, the user first registers the MspInit/MspDeInit user callbacks
-     using @ref HAL_SUBGHZ_RegisterCallback() before calling @ref HAL_SUBGHZ_DeInit()
-     or @ref HAL_SUBGHZ_Init() function.
-
-    [..]
-     When the compilation flag USE_HAL_SUBGHZ_REGISTER_CALLBACKS is set to 0 or
-     not defined, the callback registration feature is not available and all callbacks
-     are set to the corresponding weak functions.
-#endif
   */
 
 /* Includes ------------------------------------------------------------------*/
@@ -247,30 +178,7 @@ HAL_StatusTypeDef HAL_SUBGHZ_Init(SUBGHZ_HandleTypeDef *hsubghz)
     /* Allocate lock resource and initialize it */
     hsubghz->Lock = HAL_UNLOCKED;
 
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-    /* Init the SUBGHZ Legacy weak Callback settings */
-    hsubghz->TxCpltCallback              = HAL_SUBGHZ_TxCpltCallback;
-    hsubghz->RxCpltCallback              = HAL_SUBGHZ_RxCpltCallback;
-    hsubghz->PreambleDetectedCallback    = HAL_SUBGHZ_PreambleDetectedCallback;
-    hsubghz->SyncWordValidCallback       = HAL_SUBGHZ_SyncWordValidCallback;
-    hsubghz->HeaderValidCallback         = HAL_SUBGHZ_HeaderValidCallback;
-    hsubghz->HeaderErrorCallback         = HAL_SUBGHZ_HeaderErrorCallback;
-    hsubghz->CRCErrorCallback            = HAL_SUBGHZ_CRCErrorCallback;
-    hsubghz->CADStatusCallback           = HAL_SUBGHZ_CADStatusCallback;
-    hsubghz->RxTxTimeoutCallback         = HAL_SUBGHZ_RxTxTimeoutCallback;
-    hsubghz->LrFhssHopCallback           = HAL_SUBGHZ_LrFhssHopCallback;
-
-    if (hsubghz->MspInitCallback == NULL)
-    {
-      hsubghz->MspInitCallback = HAL_SUBGHZ_MspInit; /* Legacy weak MspInit  */
-    }
-
-    /* Init the low level hardware : GPIO, CLOCK, NVIC... */
-    hsubghz->MspInitCallback(hsubghz);
-#else
-    /* Init the low level hardware : GPIO, CLOCK, NVIC... */
-    HAL_SUBGHZ_MspInit(hsubghz);
-#endif /* USE_HAL_ SUBGHZ_REGISTER_CALLBACKS */
+    // Init the low level hardware : GPIO, CLOCK, NVIC...
 
 #if defined(CM0PLUS)
     /* Enable EXTI 44 : Radio IRQ ITs for CPU2 */
@@ -359,18 +267,7 @@ HAL_StatusTypeDef HAL_SUBGHZ_DeInit(SUBGHZ_HandleTypeDef *hsubghz)
   /* DeInitialize SUBGHZSPI Peripheral */
   SUBGHZSPI_DeInit();
 
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-  if (hsubghz->MspDeInitCallback == NULL)
-  {
-    hsubghz->MspDeInitCallback = HAL_SUBGHZ_MspDeInit; /* Legacy weak MspDeInit  */
-  }
-
-  /* DeInit the low level hardware: GPIO, CLOCK, NVIC... */
-  hsubghz->MspDeInitCallback(hsubghz);
-#else
-  /* DeInit the low level hardware: GPIO, CLOCK, NVIC... */
-  HAL_SUBGHZ_MspDeInit(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+  // DeInit the low level hardware: GPIO, CLOCK, NVIC...
 
 #if defined(CM0PLUS)
   /* Disable EXTI 44 : Radio IRQ ITs for CPU2 */
@@ -415,340 +312,6 @@ HAL_StatusTypeDef HAL_SUBGHZ_DeInit(SUBGHZ_HandleTypeDef *hsubghz)
   return status;
 }
 
-/**
-  * @brief  Initialize the SUBGHZ MSP.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *         the handle information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_MspInit(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_MspInit should be implemented in the user file
-   */
-
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-}
-
-/**
-  * @brief  De-Initialize the SUBGHZ MSP.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *         the handle information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_MspDeInit should be implemented in the user file
-   */
-
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-}
-
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1)
-/**
-  * @brief  Register a User SUBGHZ Callback
-  *         To be used instead of the weak predefined callback
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *         the configuration information for the specified SUBGHZ.
-  * @param  CallbackID ID of the callback to be registered
-  * @param  pCallback pointer to the Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_SUBGHZ_RegisterCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                              HAL_SUBGHZ_CallbackIDTypeDef CallbackID,
-                                              pSUBGHZ_CallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode |= HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    return HAL_ERROR;
-  }
-
-  /* Process locked */
-  __HAL_LOCK(hsubghz);
-
-  if (HAL_SUBGHZ_STATE_READY == hsubghz->State)
-  {
-    switch (CallbackID)
-    {
-      case HAL_SUBGHZ_TX_COMPLETE_CB_ID :
-        hsubghz->TxCpltCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_RX_COMPLETE_CB_ID :
-        hsubghz->RxCpltCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_PREAMBLE_DETECTED_CB_ID :
-        hsubghz->PreambleDetectedCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_SYNCWORD_VALID_CB_ID :
-        hsubghz->SyncWordValidCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_HEADER_VALID_CB_ID :
-        hsubghz->HeaderValidCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_HEADER_ERROR_CB_ID :
-        hsubghz->HeaderErrorCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_CRC_ERROR_CB_ID :
-        hsubghz->CRCErrorCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_RX_TX_TIMEOUT_CB_ID :
-        hsubghz->RxTxTimeoutCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_MSPINIT_CB_ID :
-        hsubghz->MspInitCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_MSPDEINIT_CB_ID :
-        hsubghz->MspDeInitCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_LR_FHSS_HOP_CB_ID :
-        hsubghz->LrFhssHopCallback = pCallback;
-        break;
-
-      default :
-        /* Update the error code */
-        hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else if (HAL_SUBGHZ_STATE_RESET == hsubghz->State)
-  {
-    switch (CallbackID)
-    {
-      case HAL_SUBGHZ_MSPINIT_CB_ID :
-        hsubghz->MspInitCallback = pCallback;
-        break;
-
-      case HAL_SUBGHZ_MSPDEINIT_CB_ID :
-        hsubghz->MspDeInitCallback = pCallback;
-        break;
-
-      default :
-        /* Update the error code */
-        hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  /* Release Lock */
-  __HAL_UNLOCK(hsubghz);
-
-  return status;
-}
-
-/**
-  * @brief  Unregister an SUBGHZ Callback
-  *         SUBGHZ callback is redirected to the weak predefined callback
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *         the configuration information for the specified SUBGHZ.
-  * @param  CallbackID ID of the callback to be unregistered
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_SUBGHZ_UnRegisterCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                                HAL_SUBGHZ_CallbackIDTypeDef CallbackID)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  /* Process locked */
-  __HAL_LOCK(hsubghz);
-
-  if (HAL_SUBGHZ_STATE_READY == hsubghz->State)
-  {
-    /* call legacy weak callback function */
-    switch (CallbackID)
-    {
-      case HAL_SUBGHZ_TX_COMPLETE_CB_ID :
-        hsubghz->TxCpltCallback = HAL_SUBGHZ_TxCpltCallback;
-        break;
-
-      case HAL_SUBGHZ_RX_COMPLETE_CB_ID :
-        hsubghz->RxCpltCallback = HAL_SUBGHZ_RxCpltCallback;
-        break;
-
-      case HAL_SUBGHZ_PREAMBLE_DETECTED_CB_ID :
-        hsubghz->PreambleDetectedCallback = HAL_SUBGHZ_PreambleDetectedCallback;
-        break;
-
-      case HAL_SUBGHZ_SYNCWORD_VALID_CB_ID :
-        hsubghz->SyncWordValidCallback = HAL_SUBGHZ_SyncWordValidCallback;
-        break;
-
-      case HAL_SUBGHZ_HEADER_VALID_CB_ID :
-        hsubghz->HeaderValidCallback = HAL_SUBGHZ_HeaderValidCallback;
-        break;
-
-      case HAL_SUBGHZ_HEADER_ERROR_CB_ID :
-        hsubghz->HeaderErrorCallback = HAL_SUBGHZ_HeaderErrorCallback;
-        break;
-
-      case HAL_SUBGHZ_CRC_ERROR_CB_ID :
-        hsubghz->CRCErrorCallback = HAL_SUBGHZ_CRCErrorCallback;
-        break;
-
-      case HAL_SUBGHZ_RX_TX_TIMEOUT_CB_ID :
-        hsubghz->RxTxTimeoutCallback = HAL_SUBGHZ_RxTxTimeoutCallback;
-        break;
-
-      case HAL_SUBGHZ_MSPINIT_CB_ID :
-        hsubghz->MspInitCallback = HAL_SUBGHZ_MspInit;
-        break;
-
-      case HAL_SUBGHZ_MSPDEINIT_CB_ID :
-        hsubghz->MspDeInitCallback = HAL_SUBGHZ_MspDeInit;
-        break;
-
-      case HAL_SUBGHZ_LR_FHSS_HOP_CB_ID :
-        hsubghz->LrFhssHopCallback = HAL_SUBGHZ_LrFhssHopCallback;
-        break;
-
-      default :
-        /* Update the error code */
-        hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else if (HAL_SUBGHZ_STATE_RESET == hsubghz->State)
-  {
-    switch (CallbackID)
-    {
-      case HAL_SUBGHZ_MSPINIT_CB_ID :
-        hsubghz->MspInitCallback = HAL_SUBGHZ_MspInit;
-        break;
-
-      case HAL_SUBGHZ_MSPDEINIT_CB_ID :
-        hsubghz->MspDeInitCallback = HAL_SUBGHZ_MspDeInit;
-        break;
-
-      default :
-        /* Update the error code */
-        hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-        /* Return error status */
-        status =  HAL_ERROR;
-        break;
-    }
-  }
-  else
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  /* Release Lock */
-  __HAL_UNLOCK(hsubghz);
-
-  return status;
-}
-
-/**
-  * @brief  Register the channel activity detection status SUBGHZ Callback
-  *         To be used instead of the weak HAL_SUBGHZ_AddrCallback() predefined callback
-  * @param  hsubghz Pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *                the configuration information for the specified SUBGHZ.
-  * @param  pCallback pointer to the CAD Status Callback function
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_SUBGHZ_RegisterCadStatusCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                                       pSUBGHZ_CadStatusCallbackTypeDef pCallback)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  if (pCallback == NULL)
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    return HAL_ERROR;
-  }
-  /* Process locked */
-  __HAL_LOCK(hsubghz);
-
-  if (HAL_SUBGHZ_STATE_READY == hsubghz->State)
-  {
-    hsubghz->CADStatusCallback = pCallback;
-  }
-  else
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  /* Release Lock */
-  __HAL_UNLOCK(hsubghz);
-  return status;
-}
-
-/**
-  * @brief  UnRegister the channel activity detection status SUBGHZ Callback
-  * @param  hsubghz Pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *                the configuration information for the specified SUBGHZ.
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_SUBGHZ_UnRegisterCadStatusCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  HAL_StatusTypeDef status = HAL_OK;
-
-  /* Process locked */
-  __HAL_LOCK(hsubghz);
-
-  if (HAL_SUBGHZ_STATE_READY == hsubghz->State)
-  {
-    hsubghz->CADStatusCallback = HAL_SUBGHZ_CADStatusCallback; /* Legacy weak AddrCallback */
-  }
-  else
-  {
-    /* Update the error code */
-    hsubghz->ErrorCode = HAL_SUBGHZ_ERROR_INVALID_CALLBACK;
-
-    /* Return error status */
-    status =  HAL_ERROR;
-  }
-
-  /* Release Lock */
-  __HAL_UNLOCK(hsubghz);
-  return status;
-}
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
 /**
   * @}
   */
@@ -1239,283 +802,72 @@ void HAL_SUBGHZ_IRQHandler(SUBGHZ_HandleTypeDef *hsubghz)
   /* Packet transmission completed Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_TX_CPLT) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->TxCpltCallback(hsubghz);
-#else
-    HAL_SUBGHZ_TxCpltCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* Packet received Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_RX_CPLT) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->RxCpltCallback(hsubghz);
-#else
-    HAL_SUBGHZ_RxCpltCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* Preamble Detected Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_PREAMBLE_DETECTED) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->PreambleDetectedCallback(hsubghz);
-#else
-    HAL_SUBGHZ_PreambleDetectedCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /*  Valid sync word detected Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_SYNCWORD_VALID) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->SyncWordValidCallback(hsubghz);
-#else
-    HAL_SUBGHZ_SyncWordValidCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* Valid LoRa header received Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_HEADER_VALID) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->HeaderValidCallback(hsubghz);
-#else
-    HAL_SUBGHZ_HeaderValidCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* LoRa header CRC error Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_HEADER_ERROR) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->HeaderErrorCallback(hsubghz);
-#else
-    HAL_SUBGHZ_HeaderErrorCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* Wrong CRC received Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_CRC_ERROR) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->CRCErrorCallback(hsubghz);
-#else
-    HAL_SUBGHZ_CRCErrorCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* Channel activity detection finished Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_CAD_DONE) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
     /* Channel activity Detected Interrupt */
     if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_CAD_ACTIVITY_DETECTED) != RESET)
     {
-      hsubghz->CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_DETECTED);
+      // HAL_SUBGHZ_CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_DETECTED);
     }
     else
     {
-      hsubghz->CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_CLEAR);
+      // HAL_SUBGHZ_CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_CLEAR);
     }
-#else
-    /* Channel activity Detected Interrupt */
-    if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_CAD_ACTIVITY_DETECTED) != RESET)
-    {
-      HAL_SUBGHZ_CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_DETECTED);
-    }
-    else
-    {
-      HAL_SUBGHZ_CADStatusCallback(hsubghz, HAL_SUBGHZ_CAD_CLEAR);
-    }
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
   }
 
   /* Rx or Tx Timeout Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_RX_TX_TIMEOUT) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->RxTxTimeoutCallback(hsubghz);
-#else
-    HAL_SUBGHZ_RxTxTimeoutCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 
   /* LR_FHSS Hop interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_LR_FHSS_HOP) != RESET)
   {
-#if (USE_HAL_SUBGHZ_REGISTER_CALLBACKS == 1U)
-    hsubghz->LrFhssHopCallback(hsubghz);
-#else
-    HAL_SUBGHZ_LrFhssHopCallback(hsubghz);
-#endif /* USE_HAL_SUBGHZ_REGISTER_CALLBACKS */
+    // do something
   }
 }
 
-/**
-  * @brief  Packet transmission completed callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_TxCpltCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_TxCpltCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Packet received callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_RxCpltCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_RxCpltCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Preamble Detected callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_PreambleDetectedCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_PreambleDetectedCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Valid sync word detected callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_SyncWordValidCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_SyncWordValidCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Valid LoRa header received callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_HeaderValidCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_HeaderValidCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  LoRa header CRC error callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_HeaderErrorCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_HeaderErrorCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Wrong CRC received callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_CRCErrorCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_CRCErrorCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Channel activity detection status callback.
-  * @note   Unified callback for CAD Done and CAD activity interrupts.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @param  cadstatus reports whether activity is detected or not
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_CADStatusCallback(SUBGHZ_HandleTypeDef *hsubghz,
-                                         HAL_SUBGHZ_CadStatusTypeDef cadstatus)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  UNUSED(cadstatus);
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_CADStatusCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  Rx or Tx Timeout callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_RxTxTimeoutCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_RxTxTimeoutCallback should be implemented in the user file
-   */
-}
-
-/**
-  * @brief  LR FHSS Hop callback.
-  * @param  hsubghz pointer to a SUBGHZ_HandleTypeDef structure that contains
-  *               the configuration information for SUBGHZ module.
-  * @retval None
-  */
-__weak void HAL_SUBGHZ_LrFhssHopCallback(SUBGHZ_HandleTypeDef *hsubghz)
-{
-  /* Prevent unused argument(s) compilation warning */
-  UNUSED(hsubghz);
-
-  /* NOTE : This function should not be modified, when the callback is needed,
-            the HAL_SUBGHZ_LrFhssHopCallback should be implemented in the user file
-   */
-}
 /**
   * @}
   */

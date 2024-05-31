@@ -86,11 +86,7 @@ HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
 
 static void subghz_irq_init(void);
 
-/**
-  * @brief SUBGHZ Initialization Function
-  * @param None
-  * @retval None
-  */
+
 void MX_SUBGHZ_Init(void)
 {
 	LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
