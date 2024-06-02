@@ -2,8 +2,10 @@
 #include "sysclk.h"
 #include "gpio.h"
 #include "subghz.h"
+#include "uart.h"
 
 #include "stm32wlxx_ll_utils.h"
+#include "stm32wlxx_ll_lpuart.h"
 
 void Error_Handler(void);
 
@@ -16,6 +18,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   GPIO_init();
+  UART_init();
   MX_SUBGHZ_Init();
 
   ConfigRFSwitch(RADIO_SWITCH_RX);
@@ -32,9 +35,11 @@ int main(void)
 
 int32_t putchar_(char c)
 {
-  ITM_SendChar((uint32_t)c);
-
-  return (uint32_t)c;
+  // loop while the LPUART_TDR register is full
+  while(LL_LPUART_IsActiveFlag_TXE_TXFNF(LPUART1) != 1);
+  // once the LPUART_TDR register is empty, fill it with char c
+  LL_LPUART_TransmitData8(LPUART1, (uint8_t)c);
+  return (c);
 }
 
 void Error_Handler(void)

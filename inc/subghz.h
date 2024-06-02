@@ -5,8 +5,8 @@
  *      Author: adevries
  */
 
-#ifndef INC_SUBGHZ_H_
-#define INC_SUBGHZ_H_
+#ifndef __SUBGHZ_H
+#define __SUBGHZ_H
 
 #include "stm32wlxx_hal_subghz.h"
 #include <stdint.h>
@@ -26,4 +26,4 @@ HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef continuous_rx(void);
 int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config);
 
-#endif /* INC_SUBGHZ_H_ */
+#endif /* __SUBGHZ_H */
