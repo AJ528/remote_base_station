@@ -29,32 +29,36 @@
 #define FREQ_DEVIATION				25000
 #define XTAL_FREQ					32000000
 
+
 #define SYNCWORD_BASEADDRESS		0x06C0
 
-/* USER CODE END PD */
 
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-#define RADIO_MODE_STANDBY_RC        0x02
-#define RADIO_MODE_STANDBY_HSE32	 0x03
-#define	RADIO_MODE_FS				 0x04
-#define	RADIO_MODE_RX				 0x05
-#define RADIO_MODE_TX                0x06
 
-#define	RADIO_COMMAND_RX_DONE		 0x02
-#define	RADIO_COMMAND_TIMEOUT		 0x03
-#define RADIO_COMMAND_TX_DONE        0x06
+#define RADIO_MODE_STANDBY_RC       0x02
+#define RADIO_MODE_STANDBY_HSE32	0x03
+#define	RADIO_MODE_FS				0x04
+#define	RADIO_MODE_RX				0x05
+#define RADIO_MODE_TX               0x06
 
-#define RADIO_MODE_BITFIELD          0x70
-#define RADIO_STATUS_BITFIELD        0x0E
+#define	RADIO_COMMAND_RX_DONE		0x02
+#define	RADIO_COMMAND_TIMEOUT		0x03
+#define RADIO_COMMAND_TX_DONE       0x06
+
+#define RADIO_MODE_BITFIELD         0x70
+#define RADIO_STATUS_BITFIELD       0x0E
+
+#define RADIO_IRQ_TXDONE			0x0001
+#define RADIO_IRQ_RXDONE			0x0002
+#define RADIO_IRQ_PBDET				0x0004
+#define RADIO_IRQ_ERROR				0x0040
+#define RADIO_IRQ_TIMEOUT			0x0200
+
 
 #define SX_FREQ_TO_CHANNEL( channel, freq )                                  \
 do                                                                           \
 {                                                                            \
   channel = (uint32_t) ((((uint64_t) freq)<<25)/(XTAL_FREQ) );               \
 }while( 0 )
-
-
 
 struct __attribute__((__packed__)) sRadioParams {
 	uint16_t PbLength;
@@ -67,22 +71,17 @@ struct __attribute__((__packed__)) sRadioParams {
 	uint8_t Whitening;
 };
 
+
+
 static SUBGHZ_HandleTypeDef hsubghz;
 
-struct sRadioParams params = {
-	.PbLength = 32,
-	.PbDetLength = 0x07,
-	.SyncWordLength = 32,
-	.AddrComp = 0,
-	.PktType = 0,
-	.PayloadLength = 1,
-	.CrcType = 1,
-	.Whitening = 0
-};
 
 
+static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
-HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
+static HAL_StatusTypeDef DefaultPacketParams(SUBGHZ_HandleTypeDef *hsubghz);
+static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
 
 static void subghz_irq_init(void);
 
@@ -115,72 +114,23 @@ void MX_SUBGHZ_Init(void)
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	uint8_t RadioResult = 0x00;
-	uint8_t RadioParam  = 0x00;
 	uint8_t RadioMode   = 0x00;
-//	uint8_t RadioStatus = 0x00;
-
-	const uint8_t syncword[] = {0x00, 0x00, 0x00, 0x00, 0x48, 0xDF, 0x70, 0x72};
 
 	HAL_StatusTypeDef result;
 
-	/* Set Sleep Mode */
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_SLEEP, &RadioParam, 1);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	/* Set Standby Mode */
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_STANDBY, &RadioParam, 1);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	const uint8_t buf_addr[2] = {0x80, 0x00};
-
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_BUFFERBASEADDRESS, buf_addr, 2);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETTYPE, &RadioParam, 1);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETPARAMS, (uint8_t*)&params, 9);
-	if(result != HAL_OK){
-		return result;
-	}
-
-
-	result = HAL_SUBGHZ_WriteRegisters(hsubghz, SYNCWORD_BASEADDRESS, syncword, sizeof(syncword));
-	if(result != HAL_OK){
-		return result;
-	}
+	subghz_default_init(hsubghz);
 
 	result = SetRfFrequency(hsubghz, RF_FREQ);
 	if(result != HAL_OK){
 		return result;
 	}
 
-	result = SetModulationParams(hsubghz);
+	result = SUBGHZ_Radio_Set_IRQ(hsubghz, RADIO_IRQ_RXDONE);
 	if(result != HAL_OK){
 		return result;
 	}
 
-//	uint16_t buf[4] = {0};
-//	//  buf[0] = 0x024E;
-//	//  buf[1] = 0x024E;
-//	buf[0] = 0x03FF;
-//	buf[1] = 0x03FF;
-
-	const uint8_t buf[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00};
-
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, 8);
-	if(result != HAL_OK){
-		return result;
-	}
-
+	
 	/* Retrieve Status from SUBGHZ Radio */
 	result = HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
 	if(result != HAL_OK){
@@ -191,7 +141,7 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 	RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
 
 	/* Check if SUBGHZ Radio is in RADIO_MODE_STANDBY_RC mode */
-	if(RadioMode != RADIO_MODE_STANDBY_RC)
+	if(RadioMode != RADIO_MODE_STANDBY_HSE32)
 	{
 		return HAL_ERROR;
 	}
@@ -199,11 +149,42 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 	return HAL_OK;
 }
 
-// void HAL_SUBGHZ_MspDeInit(SUBGHZ_HandleTypeDef* hsubghz)
-// {
-//     LL_APB3_GRP1_DisableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
-//     NVIC_DisableIRQ(SUBGHZ_Radio_IRQn);
-// }
+static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
+{
+	HAL_StatusTypeDef result;
+
+	const uint8_t standby_clock = 0x01;		//sets the standby clock to be HSE32
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_STANDBY, &standby_clock, sizeof(standby_clock));
+	if(result != HAL_OK){
+		return result;
+	}
+
+	const uint8_t buf_base_addr[2] = {0x80, 0x00};
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_BUFFERBASEADDRESS, buf_base_addr, sizeof(buf_base_addr));
+	if(result != HAL_OK){
+		return result;
+	}
+
+	const uint8_t packet_type  = 0x00;
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETTYPE, &packet_type, sizeof(packet_type));
+	if(result != HAL_OK){
+		return result;
+	}
+
+	const uint8_t syncword[] = {0x00, 0x00, 0x00, 0x00, 0x48, 0xDF, 0x70, 0x72};
+	result = HAL_SUBGHZ_WriteRegisters(hsubghz, SYNCWORD_BASEADDRESS, syncword, sizeof(syncword));
+	if(result != HAL_OK){
+		return result;
+	}
+
+	result = DefaultPacketParams(hsubghz);
+	if(result != HAL_OK){
+		return result;
+	}
+
+	result = DefaultModulationParams(hsubghz);
+	return result;
+}
 
 void subghz_radio_getstatus(void)
 {
@@ -306,14 +287,15 @@ HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequen
     buf[2] = ( uint8_t )( ( chan >> 8 ) & 0xFF );
     buf[3] = ( uint8_t )( chan & 0xFF );
     return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RFFREQUENCY, buf, 4));
+
+	// calibrate after setting frequency
 }
 
-HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
+HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 {
-    uint32_t tempVal = 0;
-    uint8_t buf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    uint8_t buf[8] = {0};
 
-	tempVal = ( uint32_t )(( 32 * XTAL_FREQ ) / BIT_RATE );
+	uint32_t tempVal = ( uint32_t )(( 32 * XTAL_FREQ ) / BIT_RATE );
 	buf[0] = ( tempVal >> 16 ) & 0xFF;		// BR
 	buf[1] = ( tempVal >> 8 ) & 0xFF;		// BR
 	buf[2] = tempVal & 0xFF;				// BR
@@ -326,6 +308,41 @@ HAL_StatusTypeDef SetModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 	buf[7] = ( tempVal& 0xFF );				// FDev
 
 	return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_MODULATIONPARAMS, buf, 8));
+}
+
+static HAL_StatusTypeDef DefaultPacketParams(SUBGHZ_HandleTypeDef *hsubghz)
+{
+	HAL_StatusTypeDef result;
+
+	const struct sRadioParams params = {
+		.PbLength = 32,
+		.PbDetLength = 0x07,
+		.SyncWordLength = 32,
+		.AddrComp = 0,
+		.PktType = 0,
+		.PayloadLength = 1,
+		.CrcType = 1,
+		.Whitening = 0
+	};
+
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETPARAMS, (uint8_t*)&params, 9);
+		
+	return result;
+}
+
+static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source)
+{
+	HAL_StatusTypeDef result;
+	uint8_t buf[8] = {0};
+
+	// store the 16-bit values in big-endian format
+	buf[0] = buf[2] = (uint8_t)(radio_irq_source >> 8);
+	buf[1] = buf[3] = (uint8_t)radio_irq_source;
+
+	// final 4 bytes can remain zero, they don't matter
+
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, sizeof(buf));
+	return result;
 }
 
 /**
