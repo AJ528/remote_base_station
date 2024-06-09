@@ -62,6 +62,9 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include "subghz.h"
+#include "mprintf.h"
+
 #include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_exti.h"
 #include "stm32wlxx_ll_pwr.h"
@@ -621,7 +624,7 @@ HAL_StatusTypeDef HAL_SUBGHZ_ExecGetCmd(SUBGHZ_HandleTypeDef *hsubghz,
     (void)SUBGHZSPI_Transmit(hsubghz, (uint8_t)Command);
 
     /* Use to flush the Status (First byte) receive from SUBGHZ as not use */
-    (void)SUBGHZSPI_Transmit(hsubghz, 0x00U);
+    // (void)SUBGHZSPI_Transmit(hsubghz, 0x00U);
 
     for (uint16_t i = 0U; i < Size; i++)
     {
@@ -745,7 +748,7 @@ HAL_StatusTypeDef HAL_SUBGHZ_ReadBuffer(SUBGHZ_HandleTypeDef *hsubghz,
 
     (void)SUBGHZSPI_Transmit(hsubghz, SUBGHZ_RADIO_READ_BUFFER);
     (void)SUBGHZSPI_Transmit(hsubghz, Offset);
-    (void)SUBGHZSPI_Transmit(hsubghz, 0x00U);
+    // (void)SUBGHZSPI_Transmit(hsubghz, 0x00U);
 
     for (uint16_t i = 0U; i < Size; i++)
     {
@@ -788,16 +791,18 @@ HAL_StatusTypeDef HAL_SUBGHZ_ReadBuffer(SUBGHZ_HandleTypeDef *hsubghz,
   */
 void HAL_SUBGHZ_IRQHandler(SUBGHZ_HandleTypeDef *hsubghz)
 {
-  uint8_t tmpisr[2U] = {0U};
+  uint8_t tmpisr[3U] = {0U};
   uint16_t itsource;
 
   /* Retrieve Interrupts from SUBGHZ Irq Register */
-  (void)HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_IRQSTATUS, tmpisr, 2U);
-  itsource = tmpisr[0U];
-  itsource = (itsource << 8U) | tmpisr[1U];
+  (void)HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_IRQSTATUS, tmpisr, 3U);
+  itsource = tmpisr[1U];
+  itsource = (itsource << 8U) | tmpisr[2U];
+
+  printf_("irqstatus = %#04x\r\n", itsource);
 
   /* Clear SUBGHZ Irq Register */
-  (void)HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CLR_IRQSTATUS, tmpisr, 2U);
+  (void)HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CLR_IRQSTATUS, tmpisr+1, 2U);
 
   /* Packet transmission completed Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_TX_CPLT) != RESET)
@@ -809,6 +814,9 @@ void HAL_SUBGHZ_IRQHandler(SUBGHZ_HandleTypeDef *hsubghz)
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IT_RX_CPLT) != RESET)
   {
     // do something
+    // subghz_radio_getstatus();
+    subghz_radio_getPacketStatus();
+    subghz_read_rx_buffer();
   }
 
   /* Preamble Detected Interrupt */

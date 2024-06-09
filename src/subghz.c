@@ -99,11 +99,13 @@ void MX_SUBGHZ_Init(void)
 
 	if (HAL_SUBGHZ_Init(&hsubghz) != HAL_OK)
 	{
+		printf_("error\r\n");
 		// Error_Handler();
 	}
 	if(subghz_init(&hsubghz) != HAL_OK)
 	{
 		// Error_Handler();
+		printf_("error\r\n");
 	}
 
 	subghz_irq_init();
@@ -186,11 +188,52 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 	return result;
 }
 
+void subghz_read_rx_buffer(void)
+{
+	uint8_t rx_addr;
+	uint8_t buf[16];
+	// get the start address of the rx buffer (I think)
+	HAL_SUBGHZ_ReadRegister(&hsubghz, 0x0803, &rx_addr);
+
+	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_RXBUFFERSTATUS, buf, 4);
+  	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
+
+	// rx_addr--;
+
+	// printf_("rx_addr = 0x%02x\r\n", rx_addr);
+	
+	// read 8 bytes from rx buffer
+	HAL_SUBGHZ_ReadBuffer(&hsubghz, buf[2], buf, sizeof(buf));
+
+	uint32_t i;
+	printf_("buf = ");
+	for(i = 0; i < sizeof(buf); i++){
+		printf_("%#04x, ", buf[i]);
+	}
+	printf_("\r\n");
+}
+
+void subghz_radio_getRxBufferStatus(void)
+{
+	uint8_t buf[3] = {0};
+
+	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_RXBUFFERSTATUS, buf, sizeof(buf));
+  	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
+}
+
+void subghz_radio_getPacketStatus(void)
+{
+	uint8_t buf[4] = {0};
+
+	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_PACKETSTATUS, buf, sizeof(buf));
+  	printf_("Packet Status: %#04x, %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2], buf[3]);
+}
+
 void subghz_radio_getstatus(void)
 {
 	uint8_t RadioResult = 0x00;
 	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
-  	printf_("RR: 0x%02x\n", RadioResult);
+  	printf_("RR: 0x%02x\r\n", RadioResult);
 }
 
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
@@ -207,11 +250,11 @@ HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
 	  uint8_t result = HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
 	  if (result != HAL_OK)
 	  {
-		printf_("error: 0x%02x\n", result);
+		printf_("error: 0x%02x\r\n", result);
 	  }
-	  printf_("RR: 0x%02x\n", RadioResult);
+	  printf_("RR: 0x%02x\r\n", RadioResult);
 
-	  printf_("delay\n");
+	  printf_("delay\r\n");
 	  LL_mDelay(500);
 
 	  /* Format Mode and Status receive from SUBGHZ Radio */
@@ -223,6 +266,12 @@ HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
 HAL_StatusTypeDef continuous_rx(void)
 {
 	uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFF};
+	return(HAL_SUBGHZ_ExecSetCmd(&hsubghz, RADIO_SET_RX, RadioCmd, 3));
+}
+
+HAL_StatusTypeDef single_rx_blocking(void)
+{
+	uint8_t RadioCmd[3] = {0};
 	return(HAL_SUBGHZ_ExecSetCmd(&hsubghz, RADIO_SET_RX, RadioCmd, 3));
 }
 
@@ -320,7 +369,7 @@ static HAL_StatusTypeDef DefaultPacketParams(SUBGHZ_HandleTypeDef *hsubghz)
 		.SyncWordLength = 32,
 		.AddrComp = 0,
 		.PktType = 0,
-		.PayloadLength = 1,
+		.PayloadLength = 2,
 		.CrcType = 1,
 		.Whitening = 0
 	};

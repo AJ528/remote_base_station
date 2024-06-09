@@ -23,13 +23,13 @@ int main(void)
 
   ConfigRFSwitch(RADIO_SWITCH_RX);
 
-  continuous_rx();
+  // continuous_rx();
 
   while (1)
   {
-    subghz_radio_getstatus();
-  	LL_mDelay(1000);
-
+    // subghz_radio_getstatus();
+    single_rx_blocking();
+  	LL_mDelay(500);
   }
 }
 

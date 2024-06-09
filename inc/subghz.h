@@ -21,9 +21,13 @@ typedef enum
 
 void MX_SUBGHZ_Init(void);
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz);
+void subghz_radio_getRxBufferStatus(void);
+void subghz_radio_getPacketStatus(void);
 void subghz_radio_getstatus(void);
+void subghz_read_rx_buffer(void);
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef continuous_rx(void);
+HAL_StatusTypeDef single_rx_blocking(void);
 int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config);
 
 #endif /* __SUBGHZ_H */
