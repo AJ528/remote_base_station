@@ -7,6 +7,7 @@
 
 #include "subghz.h"
 
+#include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_gpio.h"
 #include "stm32wlxx_ll_bus.h"
 #include "stm32wlxx_ll_rcc.h"
@@ -24,7 +25,7 @@
 #define RF_SW_CTRL1_GPIO_Port GPIOC
 
 
-#define RF_FREQ						868000000
+#define RF_FREQ						915000000
 #define BIT_RATE					50000
 #define FREQ_DEVIATION				25000
 #define XTAL_FREQ					32000000
@@ -134,7 +135,6 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 		return result;
 	}
 #endif
-
 	
 	/* Retrieve Status from SUBGHZ Radio */
 	result = HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
@@ -146,7 +146,7 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 	RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
 
 	/* Check if SUBGHZ Radio is in RADIO_MODE_STANDBY_RC mode */
-	if(RadioMode != RADIO_MODE_STANDBY_HSE32)
+	if(RadioMode != RADIO_MODE_STANDBY_RC)
 	{
 		return HAL_ERROR;
 	}
@@ -158,7 +158,7 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	HAL_StatusTypeDef result;
 
-	const uint8_t standby_clock = 0x01;		//sets the standby clock to be HSE32
+	const uint8_t standby_clock = 0x00;		//sets the standby clock to be RC 13 MHz
 	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_STANDBY, &standby_clock, sizeof(standby_clock));
 	if(result != HAL_OK){
 		return result;
@@ -176,7 +176,6 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 		return result;
 	}
 
-	// const uint8_t syncword[] = {0x00, 0x00, 0x00, 0x00, 0x48, 0xDF, 0x70, 0x72};
 	const uint8_t syncword[] = {0x48, 0xDF, 0x70, 0x72, 0x00, 0x00, 0x00, 0x00};
 	result = HAL_SUBGHZ_WriteRegisters(hsubghz, SYNCWORD_BASEADDRESS, syncword, sizeof(syncword));
 	if(result != HAL_OK){
@@ -201,19 +200,12 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 
 void subghz_read_rx_buffer(void)
 {
-	uint8_t rx_addr;
-	uint8_t buf[16];
-	// get the start address of the rx buffer (I think)
-	HAL_SUBGHZ_ReadRegister(&hsubghz, 0x0803, &rx_addr);
+	uint8_t buf[3];
 
 	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_RXBUFFERSTATUS, buf, 4);
   	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
-
-	// rx_addr--;
-
-	// printf_("rx_addr = 0x%02x\r\n", rx_addr);
 	
-	// read 8 bytes from rx buffer
+	// read bytes from rx buffer
 	HAL_SUBGHZ_ReadBuffer(&hsubghz, buf[2], buf, sizeof(buf));
 
 	uint32_t i;
@@ -391,6 +383,16 @@ HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequen
 {
     uint8_t buf[4];
     uint32_t chan = 0;
+	HAL_StatusTypeDef result;
+	const uint32_t freq_lower_limit = 902000000;
+	const uint32_t freq_upper_limit = 928000000;
+
+	if(frequency < freq_lower_limit){
+		frequency = freq_lower_limit;
+	}
+	if(frequency > freq_upper_limit){
+		frequency = freq_upper_limit;
+	}
 
 
     SX_FREQ_TO_CHANNEL(chan, frequency);
@@ -398,9 +400,28 @@ HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequen
     buf[1] = ( uint8_t )( ( chan >> 16 ) & 0xFF );
     buf[2] = ( uint8_t )( ( chan >> 8 ) & 0xFF );
     buf[3] = ( uint8_t )( chan & 0xFF );
-    return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RFFREQUENCY, buf, 4));
+
+    result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RFFREQUENCY, buf, 4);
+	if(result != HAL_OK){
+		return result;
+	}
 
 	// calibrate after setting frequency
+	// calibrate for center frequency +/- 4 MHz
+
+	const uint32_t delta_freq = 4000000;
+
+	uint32_t upper_freq = frequency + delta_freq;
+	uint32_t lower_freq = frequency - delta_freq;
+
+	uint8_t cal_buf[2];
+
+	cal_buf[0] = (uint8_t)(lower_freq / 4000000);
+	cal_buf[1] = (uint8_t)(upper_freq / 4000000);
+
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CALIBRATEIMAGE, cal_buf, 2);
+
+	return result;
 }
 
 HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)

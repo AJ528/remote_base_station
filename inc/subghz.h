@@ -11,8 +11,8 @@
 #include "stm32wlxx_hal_subghz.h"
 #include <stdint.h>
 
-#define TX_MODE  1
-#define RX_MODE  0
+#define TX_MODE  0
+#define RX_MODE  1
 
 typedef enum
 {

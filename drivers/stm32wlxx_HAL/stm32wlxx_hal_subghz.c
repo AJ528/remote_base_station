@@ -64,6 +64,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "subghz.h"
 #include "mprintf.h"
+#include "pin_defs.h"
+#include "stm32wlxx_ll_gpio.h"
 
 #include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_exti.h"
@@ -815,6 +817,7 @@ void HAL_SUBGHZ_IRQHandler(SUBGHZ_HandleTypeDef *hsubghz)
   {
     // do something
     // subghz_radio_getstatus();
+    LL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
     subghz_radio_getPacketStatus();
     subghz_read_rx_buffer();
   }
