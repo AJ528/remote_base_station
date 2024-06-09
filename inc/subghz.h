@@ -11,6 +11,9 @@
 #include "stm32wlxx_hal_subghz.h"
 #include <stdint.h>
 
+#define TX_MODE  1
+#define RX_MODE  0
+
 typedef enum
 {
   RADIO_SWITCH_OFF    = 0,
@@ -24,6 +27,8 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz);
 void subghz_radio_getRxBufferStatus(void);
 void subghz_radio_getPacketStatus(void);
 void subghz_radio_getstatus(void);
+void subghz_write_tx_buffer(uint8_t value);
+HAL_StatusTypeDef tx_packet(void);
 void subghz_read_rx_buffer(void);
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef continuous_rx(void);

@@ -4,6 +4,9 @@
 #include "subghz.h"
 #include "uart.h"
 
+#include "pin_defs.h"
+#include "stm32wlxx_ll_gpio.h"
+
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
 
@@ -21,16 +24,39 @@ int main(void)
   UART_init();
   MX_SUBGHZ_Init();
 
+#if (RX_MODE == 1)
+
   ConfigRFSwitch(RADIO_SWITCH_RX);
 
   // continuous_rx();
 
   while (1)
   {
+
     // subghz_radio_getstatus();
     single_rx_blocking();
   	LL_mDelay(500);
+
   }
+#endif
+
+#if (TX_MODE == 1)
+
+  ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
+
+  uint8_t i = 0;
+
+  while (1)
+  {
+    subghz_write_tx_buffer(i++);
+    tx_packet();
+    LL_mDelay(100);
+    subghz_radio_getstatus();
+    LL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+  	LL_mDelay(1000);
+  }
+
+#endif
 }
 
 int32_t putchar_(char c)

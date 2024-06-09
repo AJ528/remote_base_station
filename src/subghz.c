@@ -81,6 +81,7 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
 HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef DefaultPacketParams(SUBGHZ_HandleTypeDef *hsubghz);
+static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
 
 static void subghz_irq_init(void);
@@ -100,15 +101,15 @@ void MX_SUBGHZ_Init(void)
 	if (HAL_SUBGHZ_Init(&hsubghz) != HAL_OK)
 	{
 		printf_("error\r\n");
-		// Error_Handler();
 	}
 	if(subghz_init(&hsubghz) != HAL_OK)
 	{
-		// Error_Handler();
 		printf_("error\r\n");
 	}
 
+#if (RX_MODE == 1)
 	subghz_irq_init();
+#endif
 
 }
 
@@ -127,10 +128,12 @@ HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 		return result;
 	}
 
+#if (RX_MODE == 1)
 	result = SUBGHZ_Radio_Set_IRQ(hsubghz, RADIO_IRQ_RXDONE);
 	if(result != HAL_OK){
 		return result;
 	}
+#endif
 
 	
 	/* Retrieve Status from SUBGHZ Radio */
@@ -173,7 +176,8 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 		return result;
 	}
 
-	const uint8_t syncword[] = {0x00, 0x00, 0x00, 0x00, 0x48, 0xDF, 0x70, 0x72};
+	// const uint8_t syncword[] = {0x00, 0x00, 0x00, 0x00, 0x48, 0xDF, 0x70, 0x72};
+	const uint8_t syncword[] = {0x48, 0xDF, 0x70, 0x72, 0x00, 0x00, 0x00, 0x00};
 	result = HAL_SUBGHZ_WriteRegisters(hsubghz, SYNCWORD_BASEADDRESS, syncword, sizeof(syncword));
 	if(result != HAL_OK){
 		return result;
@@ -183,6 +187,13 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 	if(result != HAL_OK){
 		return result;
 	}
+
+#if (TX_MODE == 1)
+	result = DefaultTxConfig(hsubghz);
+	if(result != HAL_OK){
+		return result;
+	}
+#endif
 
 	result = DefaultModulationParams(hsubghz);
 	return result;
@@ -234,6 +245,58 @@ void subghz_radio_getstatus(void)
 	uint8_t RadioResult = 0x00;
 	HAL_SUBGHZ_ExecGetCmd(&hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
   	printf_("RR: 0x%02x\r\n", RadioResult);
+}
+
+void subghz_write_tx_buffer(uint8_t value)
+{
+	uint8_t tx_addr;
+	uint8_t buf[2];
+	uint8_t buf2[3];
+	buf[0] = value;
+	buf[1] = value + 1;
+	// get the start address of the tx buffer (I think)
+	HAL_SUBGHZ_ReadRegister(&hsubghz, 0x0802, &tx_addr);
+
+	printf_("tx_addr = %#0x\r\n", tx_addr);
+	
+	// write bytes to the start of the tx buffer
+	HAL_SUBGHZ_WriteBuffer(&hsubghz, 0x80, buf, sizeof(buf));
+
+	printf_("value = %#04x\r\n", value);
+
+	HAL_SUBGHZ_ReadBuffer(&hsubghz, 0x81, buf2, sizeof(buf2));
+
+	printf_("buf2 = %#04x\r\n", buf2[1]);
+
+}
+
+HAL_StatusTypeDef tx_packet(void)
+{
+	uint8_t RadioCmd[3] = {0xff, 0xff, 0x00};	// disable timeout
+	return(HAL_SUBGHZ_ExecSetCmd(&hsubghz, RADIO_SET_TX, RadioCmd, 3));
+}
+
+static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz)
+{
+	HAL_StatusTypeDef result;
+
+	uint8_t buf[4] = {0};
+
+	// configures output power for +10 dBm
+	buf[0] = 0x01;	// set PA duty cycle to 1
+	buf[1] = 0x00; 	// set HP PA output power to 0
+	buf[2] = 0x01;	// select the LP PA
+	buf[3] = 0x01;	// must be 0x01
+
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACONFIG, buf, 4);
+
+	// reuse buffer for next command
+	buf[0] = 0x0D;	// set output to +13 dBm (somehow turns into +10 dBm when you actually reach the output)
+	buf[1] = 0x04;	// set the PA ramp up time to 200 us for no reason other than it's in the middle
+	
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_TXPARAMS, buf, 2);
+
+	return result;
 }
 
 HAL_StatusTypeDef single_rx_block(SUBGHZ_HandleTypeDef *hsubghz)
