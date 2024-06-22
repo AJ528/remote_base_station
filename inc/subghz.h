@@ -10,6 +10,7 @@
 
 #include "stm32wlxx_hal_subghz.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 #define TX_MODE  0
 #define RX_MODE  1
@@ -25,7 +26,7 @@ typedef enum
 void MX_SUBGHZ_Init(void);
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz);
 void subghz_radio_getRxBufferStatus(void);
-void subghz_radio_getPacketStatus(void);
+void subghz_radio_getPacketStatus(uint8_t *buffer, bool print);
 void subghz_radio_getstatus(void);
 void subghz_write_tx_buffer(uint8_t value);
 HAL_StatusTypeDef tx_packet(void);

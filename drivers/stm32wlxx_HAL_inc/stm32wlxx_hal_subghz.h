@@ -225,20 +225,16 @@ typedef enum
   * @{
   */
 
+
 /**
   * @brief SUBGHZSPI_Interrupts SUBGHZSPI Interrupts
   */
-#define SUBGHZ_IT_TX_CPLT                   0x0001U
-#define SUBGHZ_IT_RX_CPLT                   0x0002U
-#define SUBGHZ_IT_PREAMBLE_DETECTED         0x0004U
-#define SUBGHZ_IT_SYNCWORD_VALID            0x0008U
-#define SUBGHZ_IT_HEADER_VALID              0x0010U
-#define SUBGHZ_IT_HEADER_ERROR              0x0020U
-#define SUBGHZ_IT_CRC_ERROR                 0x0040U
-#define SUBGHZ_IT_CAD_DONE                  0x0080U
-#define SUBGHZ_IT_CAD_ACTIVITY_DETECTED     0x0100U
-#define SUBGHZ_IT_RX_TX_TIMEOUT             0x0200U
-#define SUBGHZ_IT_LR_FHSS_HOP               0x4000U
+#define SUBGHZ_IRQ_TXDONE                   0x0001U
+#define SUBGHZ_IRQ_RXDONE                   0x0002U
+#define SUBGHZ_IRQ_PREAMBLE_DETECTED        0x0004U
+#define SUBGHZ_IRQ_SYNCWORD_VALID           0x0008U
+#define SUBGHZ_IRQ_ERROR                    0x0040U
+#define SUBGHZ_IRQ_RX_TX_TIMEOUT            0x0200U
 /**
   * @brief SUBGHZ Radio Read/Write Command definition
   */

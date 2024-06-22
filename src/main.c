@@ -13,7 +13,6 @@
 void Error_Handler(void);
 
 
-
 int main(void)
 {
   /* Configure the system clock */
