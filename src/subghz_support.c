@@ -4,7 +4,6 @@
 #include "subghz.h"
 
 #include "stm32wlxx_hal_subghz.h"
-
 #include "mprintf.h"
 
 #include <stdint.h>
@@ -39,6 +38,10 @@ struct __attribute__((__packed__)) sRadioParams {
 
 
 extern SUBGHZ_HandleTypeDef subghz_handle;
+
+static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz);
+static HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
+static HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz);
 
 HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 {
@@ -139,18 +142,6 @@ void subghz_radio_getPacketStatus(uint8_t *buffer, bool print)
 	}
 }
 
-
-
-/**
-  * @brief  Configure Radio Switch.
-  * @param  Config: Specifies the Radio RF switch path to be set.
-  *         This parameter can be one of following parameters:
-  *           @arg RADIO_SWITCH_OFF
-  *           @arg RADIO_SWITCH_RX
-  *           @arg RADIO_SWITCH_RFO_LP
-  *           @arg RADIO_SWITCH_RFO_HP
-  * @retval BSP status
-  */
 int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
 {
   switch (Config)
@@ -254,7 +245,7 @@ HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequen
 	return result;
 }
 
-HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
+static HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	HAL_StatusTypeDef result;
 	//implements CRC16-CCITT
@@ -271,7 +262,7 @@ HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
 
 }
 
-HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
+static HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 {
     uint8_t buf[8] = {0};
 
@@ -290,7 +281,7 @@ HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 	return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_MODULATIONPARAMS, buf, 8));
 }
 
-HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz)
+static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	HAL_StatusTypeDef result;
 
@@ -310,5 +301,19 @@ HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz)
 	
 	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_TXPARAMS, buf, 2);
 
+	return result;
+}
+
+HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source)
+{
+	HAL_StatusTypeDef result;
+	uint8_t buf[8] = {0};
+
+	// store the 16-bit values in big-endian format
+	buf[0] = buf[2] = (uint8_t)(radio_irq_source >> 8);
+	buf[1] = buf[3] = (uint8_t)radio_irq_source;
+
+	// final 4 bytes can remain zero, they don't matter
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, sizeof(buf));
 	return result;
 }

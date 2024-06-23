@@ -25,13 +25,10 @@
 #define RF_SW_CTRL1_GPIO_Port GPIOC
 
 HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz);
-HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
-HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
-HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef SetAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
-
+HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
 void subghz_radio_getPacketStatus(uint8_t *buffer, bool print);
 
 

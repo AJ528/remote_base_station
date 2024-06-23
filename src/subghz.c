@@ -11,7 +11,6 @@
 #include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_bus.h"
 #include "stm32wlxx_ll_rcc.h"
-#include "stm32wlxx_ll_utils.h"
 
 #include "mprintf.h"
 
@@ -24,18 +23,12 @@
 #define	RADIO_MODE_RX				0x05
 #define RADIO_MODE_TX               0x06
 
-#define	RADIO_COMMAND_RX_DONE		0x02
-#define	RADIO_COMMAND_TIMEOUT		0x03
-#define RADIO_COMMAND_TX_DONE       0x06
-
 #define RADIO_MODE_BITFIELD         0x70
 #define RADIO_STATUS_BITFIELD       0x0E
 
-
-
 SUBGHZ_HandleTypeDef subghz_handle;
 
-static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
+
 static void subghz_irq_init(void);
 
 
@@ -62,9 +55,7 @@ void MX_SUBGHZ_Init(void)
 #if (RX_MODE == 1)
 	subghz_irq_init();
 #endif
-
 }
-
 
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
 {
@@ -113,10 +104,6 @@ void subghz_read_rx_buffer(void)
 
 	uint32_t payload_len = buf[1] + 1;
   	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
-
-	if(payload_len != 4){
-		printf_("ERROR!\r\n");
-	}
 	
 	// read bytes from rx buffer
 	HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], buf, (uint16_t)payload_len);
@@ -152,7 +139,6 @@ void subghz_write_tx_buffer(uint8_t value)
 	HAL_SUBGHZ_ReadBuffer(&subghz_handle, 0x81, buf2, sizeof(buf2));
 
 	printf_("buf2 = %#04x\r\n", buf2[1]);
-
 }
 
 HAL_StatusTypeDef tx_packet(void)
@@ -171,21 +157,6 @@ HAL_StatusTypeDef single_rx_blocking(void)
 {
 	uint8_t RadioCmd[3] = {0};
 	return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
-}
-
-static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source)
-{
-	HAL_StatusTypeDef result;
-	uint8_t buf[8] = {0};
-
-	// store the 16-bit values in big-endian format
-	buf[0] = buf[2] = (uint8_t)(radio_irq_source >> 8);
-	buf[1] = buf[3] = (uint8_t)radio_irq_source;
-
-	// final 4 bytes can remain zero, they don't matter
-
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, sizeof(buf));
-	return result;
 }
 
 static void subghz_irq_init(void)

@@ -63,6 +63,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "subghz.h"
+#include "subghz_support.h"
 #include "mprintf.h"
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
