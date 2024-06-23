@@ -35,7 +35,11 @@
 
 #define SYNCWORD_BASEADDRESS		0x06C0
 #define NODE_ADDRESS_REG			0x06CD
-#define BROADCAST_ADDRESS_REG		0x06CE			
+#define BROADCAST_ADDRESS_REG		0x06CE		
+#define CRC_INIT_MSB_REG			0x06BC
+#define CRC_INIT_LSB_REG			0x06BD
+#define CRC_POLY_MSB_REG			0x06BE
+#define CRC_POLY_LSB_REG			0x06BF
 
 
 
@@ -80,6 +84,7 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
 HAL_StatusTypeDef SetAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
 HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
 static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
@@ -186,6 +191,11 @@ static HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
 		return result;
 	}
 
+	result = DefaultCRC(hsubghz);
+	if(result != HAL_OK){
+		return result;
+	}
+
 #if (RX_MODE == 1)
 	uint8_t payload_len = 18;
 #endif
@@ -222,6 +232,9 @@ void subghz_read_rx_buffer(void)
 	uint32_t payload_len = buf[1] + 1;
   	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
 
+	if(payload_len != 4){
+		printf_("ERROR!\r\n");
+	}
 	
 	// read bytes from rx buffer
 	HAL_SUBGHZ_ReadBuffer(&hsubghz, buf[2], buf, (uint16_t)payload_len);
@@ -456,6 +469,23 @@ HAL_StatusTypeDef SetAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address)
 	return HAL_SUBGHZ_WriteRegisters(hsubghz, NODE_ADDRESS_REG, &address, sizeof(address));
 }
 
+HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
+{
+	HAL_StatusTypeDef result;
+	//implements CRC16-CCITT
+	static const uint8_t CRC_init[2] = {0x1D, 0x0F};
+	static const uint8_t CRC_poly[2] = {0x10, 0x21};
+
+	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_INIT_MSB_REG, CRC_init, sizeof(CRC_init));
+	if(result != HAL_OK){
+		return result;
+	}
+	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_POLY_MSB_REG, CRC_poly, sizeof(CRC_poly));
+	return result;
+
+
+}
+
 HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 {
     uint8_t buf[8] = {0};
@@ -486,7 +516,7 @@ static HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t
 		.AddrComp = 0x01,		// filter on node address
 		.PktType = 1,
 		.PayloadLength = length,
-		.CrcType = 1,
+		.CrcType = 2,			// 2 byte CRC
 		.Whitening = 0
 	};
 
