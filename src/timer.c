@@ -21,7 +21,7 @@ void timer_init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM16);
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM17);
 
-  uint32_t TIM17_period = 0x1000;
+  uint32_t TIM17_period = 0x0800;
   // uint32_t TIM17_period = 820;
   //set TIM17 to 39,024 Hz
   //TODO: verify the frequency is not 38,976 Hz
@@ -35,12 +35,11 @@ void timer_init(void)
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_InitStruct.CompareValue = TIM17_period / 3;
+  TIM_OC_InitStruct.CompareValue = TIM17_period / 2;
   LL_TIM_OC_Init(TIM17, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
 
-  LL_TIM_CC_EnableChannel(TIM17, LL_TIM_CHANNEL_CH1);
   LL_TIM_EnableCounter(TIM17);
-  LL_TIM_GenerateEvent_UPDATE(TIM17);
+  LL_TIM_EnableAllOutputs(TIM17);
 }
