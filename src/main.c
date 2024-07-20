@@ -3,6 +3,7 @@
 #include "gpio.h"
 #include "subghz.h"
 #include "uart.h"
+#include "timer.h"
 
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
@@ -22,6 +23,7 @@ int main(void)
   GPIO_init();
   UART_init();
   MX_SUBGHZ_Init();
+  timer_init();
 
 #if (RX_MODE == 1)
   // continuous_rx();
