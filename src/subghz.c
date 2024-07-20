@@ -54,6 +54,10 @@ void MX_SUBGHZ_Init(void)
 
 #if (RX_MODE == 1)
 	subghz_irq_init();
+	ConfigRFSwitch(RADIO_SWITCH_RX);
+#endif
+#if (TX_MODE == 1)
+	ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
 #endif
 }
 

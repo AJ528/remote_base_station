@@ -15,14 +15,6 @@
 #define TX_MODE  0
 #define RX_MODE  1
 
-typedef enum
-{
-  RADIO_SWITCH_OFF    = 0,
-  RADIO_SWITCH_RX     = 1,
-  RADIO_SWITCH_RFO_LP = 2,
-  RADIO_SWITCH_RFO_HP = 3,
-}BSP_RADIO_Switch_TypeDef;
-
 void MX_SUBGHZ_Init(void);
 HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz);
 void subghz_write_tx_buffer(uint8_t value);

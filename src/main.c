@@ -24,14 +24,10 @@ int main(void)
   MX_SUBGHZ_Init();
 
 #if (RX_MODE == 1)
-
-  ConfigRFSwitch(RADIO_SWITCH_RX);
-
   // continuous_rx();
 
   while (1)
   {
-
     // subghz_radio_getstatus();
     single_rx_blocking();
   	LL_mDelay(500);
@@ -40,9 +36,6 @@ int main(void)
 #endif
 
 #if (TX_MODE == 1)
-
-  ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
-
   uint8_t i = 0;
 
   while (1)
