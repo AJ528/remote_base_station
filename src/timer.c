@@ -4,10 +4,9 @@
 
 #include "stm32wlxx_ll_tim.h"
 
-
-#include "stm32wlxx_ll_exti.h"
 #include "stm32wlxx_ll_bus.h"
-#include "stm32wlxx_ll_system.h"
+#include "stm32wlxx_ll_dma.h"
+#include <stdint.h>
 
 
 void timer_init(void)
@@ -61,4 +60,25 @@ void timer_init(void)
 
   LL_TIM_EnableCounter(TIM16);
   LL_TIM_EnableAllOutputs(TIM16);
+}
+
+void dma_init(void)
+{
+  LL_DMA_InitTypeDef DMA_InitStruct = {0};
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMAMUX1);
+  LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+
+  // DMA_InitStruct.PeriphOrM2MSrcAddress = TIM16_BASE;
+  DMA_InitStruct.PeriphOrM2MSrcAddress = (uint32_t)&(TIM16->DMAR);
+  // DMA_InitStruct.MemoryOrM2MDstAddress = TBD;
+  DMA_InitStruct.Direction = LL_DMA_DIRECTION_MEMORY_TO_PERIPH;
+  DMA_InitStruct.Mode = LL_DMA_MODE_NORMAL;
+  DMA_InitStruct.PeriphOrM2MSrcIncMode = LL_DMA_PERIPH_NOINCREMENT;
+  DMA_InitStruct.MemoryOrM2MDstIncMode = LL_DMA_MEMORY_INCREMENT;
+  DMA_InitStruct.PeriphOrM2MSrcDataSize = LL_DMA_PDATAALIGN_HALFWORD;
+  DMA_InitStruct.MemoryOrM2MDstDataSize = LL_DMA_MDATAALIGN_HALFWORD;
+  // DMA_InitStruct.NbData = TBD;
+  DMA_InitStruct.PeriphRequest = LL_DMAMUX_REQ_TIM16_UP;
+  DMA_InitStruct.Priority = LL_DMA_PRIORITY_MEDIUM;
+
 }
