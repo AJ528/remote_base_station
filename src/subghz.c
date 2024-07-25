@@ -166,7 +166,7 @@ HAL_StatusTypeDef single_rx_blocking(void)
 static void subghz_irq_init(void)
 {
   /* SUBGHZ_Radio_IRQn interrupt configuration */
-  NVIC_SetPriority(SUBGHZ_Radio_IRQn, 0);
+  NVIC_SetPriority(SUBGHZ_Radio_IRQn, 3);
   NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
 }
 
