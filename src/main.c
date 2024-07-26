@@ -23,6 +23,7 @@ int main(void)
   GPIO_init();
   UART_init();
   MX_SUBGHZ_Init();
+  dma_init();
   timer_init();
 
 #if (RX_MODE == 1)
