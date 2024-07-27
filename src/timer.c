@@ -20,11 +20,11 @@ static volatile bool first_interrupt = true;
 
 uint16_t dma_data_arr[] = {
   TIM17_PERIOD, 0, TIM17_PERIOD/2,
-  TIM17_PERIOD, 4, TIM17_PERIOD/16,
-  TIM17_PERIOD, 4, TIM17_PERIOD/2,
-  TIM17_PERIOD, 4, TIM17_PERIOD/4,
-  TIM17_PERIOD, 4, TIM17_PERIOD/32,
-  TIM17_PERIOD, 4, TIM17_PERIOD/2
+  TIM17_PERIOD, 0, TIM17_PERIOD/2,
+  TIM17_PERIOD, 0, TIM17_PERIOD/2,
+  TIM17_PERIOD, 0, TIM17_PERIOD/2,
+  TIM17_PERIOD, 0, TIM17_PERIOD/4,
+  TIM17_PERIOD, 0, TIM17_PERIOD/32
 };
 uint32_t arr_size = sizeof(dma_data_arr)/sizeof(dma_data_arr[0]);
 
@@ -65,8 +65,6 @@ void timer_init(void)
 
   LL_TIM_EnableDMAReq_UPDATE(TIM17);
   NVIC_SetPriority(TIM17_IRQn, 3);
-  
-  // NVIC_EnableIRQ(TIM17_IRQn);
 
   LL_TIM_GenerateEvent_UPDATE(TIM17);
   while(READ_BIT(TIM17->EGR, TIM_EGR_UG));
@@ -75,7 +73,7 @@ void timer_init(void)
   LL_TIM_EnableAllOutputs(TIM17);
   LL_TIM_EnableCounter(TIM17);
 
-  LL_TIM_EnableIT_UPDATE(TIM17);
+  // LL_TIM_EnableIT_UPDATE(TIM17);
   
   TIM_InitStruct.Prescaler = 0x2000;                                     
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
@@ -133,6 +131,7 @@ void TIM17_IRQHandler(void)
     first_interrupt = false;
     // printf_("resetting output pin\n");
     LL_GPIO_ResetOutputPin(LED1_GPIO_Port, LED1_Pin);
+    LL_TIM_SetOnePulseMode(TIM17, LL_TIM_ONEPULSEMODE_SINGLE);
   }else{
     LL_TIM_SetOnePulseMode(TIM17, LL_TIM_ONEPULSEMODE_SINGLE);
   }
@@ -147,11 +146,10 @@ void DMA1_Channel1_IRQHandler(void)
   LL_GPIO_SetOutputPin(LED1_GPIO_Port, LED1_Pin);
   
   first_interrupt = true;
-  // LL_TIM_EnableIT_UPDATE(TIM17);
+  LL_TIM_EnableIT_UPDATE(TIM17);
   LL_TIM_ClearFlag_CC1(TIM17);
   LL_TIM_ClearFlag_UPDATE(TIM17);
-  printf_("interrupt status: %#010x\r\n", TIM17->SR);
+  NVIC_ClearPendingIRQ(TIM17_IRQn);
   NVIC_EnableIRQ(TIM17_IRQn);
-  LL_TIM_ClearFlag_UPDATE(TIM17);
-  printf_("interrupt status: %#010x\r\n", TIM17->SR);
+
 }
