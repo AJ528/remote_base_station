@@ -16,11 +16,7 @@
 #define TIM16_PERIOD    0x2000
 #define TIM17_PERIOD    0x0800
 
-static volatile bool first_interrupt = true;
-
 uint16_t dma_data_arr[] = {
-  TIM17_PERIOD, 0, TIM17_PERIOD/2,
-  TIM17_PERIOD, 0, TIM17_PERIOD/2,
   TIM17_PERIOD, 0, TIM17_PERIOD/2,
   TIM17_PERIOD, 0, TIM17_PERIOD/2,
   TIM17_PERIOD, 0, TIM17_PERIOD/4,
@@ -72,8 +68,6 @@ void timer_init(void)
 
   LL_TIM_EnableAllOutputs(TIM17);
   LL_TIM_EnableCounter(TIM17);
-
-  // LL_TIM_EnableIT_UPDATE(TIM17);
   
   TIM_InitStruct.Prescaler = 0x2000;                                     
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
@@ -127,29 +121,18 @@ void TIM17_IRQHandler(void)
 {
   LL_TIM_ClearFlag_UPDATE(TIM17);
 
-  if(first_interrupt){
-    first_interrupt = false;
-    // printf_("resetting output pin\n");
-    LL_GPIO_ResetOutputPin(LED1_GPIO_Port, LED1_Pin);
-    LL_TIM_SetOnePulseMode(TIM17, LL_TIM_ONEPULSEMODE_SINGLE);
-  }else{
-    LL_TIM_SetOnePulseMode(TIM17, LL_TIM_ONEPULSEMODE_SINGLE);
-  }
-
-  
-
+  LL_GPIO_ResetOutputPin(LED1_GPIO_Port, LED1_Pin);
+  LL_TIM_SetOnePulseMode(TIM17, LL_TIM_ONEPULSEMODE_SINGLE);
 }
 
 void DMA1_Channel1_IRQHandler(void)
 {
   LL_DMA_ClearFlag_GI1(DMA1);
+
   LL_GPIO_SetOutputPin(LED1_GPIO_Port, LED1_Pin);
-  
-  first_interrupt = true;
-  LL_TIM_EnableIT_UPDATE(TIM17);
-  LL_TIM_ClearFlag_CC1(TIM17);
   LL_TIM_ClearFlag_UPDATE(TIM17);
-  NVIC_ClearPendingIRQ(TIM17_IRQn);
+  LL_TIM_EnableIT_UPDATE(TIM17);
+  // NVIC_ClearPendingIRQ(TIM17_IRQn);
   NVIC_EnableIRQ(TIM17_IRQn);
 
 }
