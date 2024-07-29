@@ -4,6 +4,7 @@
 #include "subghz.h"
 #include "uart.h"
 #include "timer.h"
+#include "IR_lib.h"
 
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
@@ -25,6 +26,8 @@ int main(void)
   MX_SUBGHZ_Init();
   dma_init();
   timer_init();
+
+  send_command();
 
 #if (RX_MODE == 1)
   // continuous_rx();
