@@ -12,6 +12,17 @@ const struct device toshiba_tv =
  .prot_used = &NEC1
 };
 
+//device = 0x00
+//subdevice = 0xFF
+const struct device soundbar =
+{
+ .device_id = 0x00,
+ .device_len = 8,
+ .subdevice_id = 0xFF,
+ .subdevice_len = 8,
+ .prot_used = &NEC1
+};
+
 //IRP notation: {38.0k,564}<1,-1|1,-3>(16,-8,D:8,S:8,F:8,~F:8,1,^108m,(16,-4,1,^108m)*)
 const struct protocol NEC1 =
 {

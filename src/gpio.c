@@ -84,7 +84,7 @@ void GPIO_init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-  // GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_14;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
+  // GPIO_InitStruct.Alternate = LL_GPIO_AF_14;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }
