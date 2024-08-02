@@ -5,26 +5,6 @@
 
 #include <stdint.h>
 
-
-#define PULSE_PERIOD    0x0800
-
-uint16_t dma_data_arr[] = {
-  PULSE_PERIOD, 0, PULSE_PERIOD/2,
-  PULSE_PERIOD, 0, PULSE_PERIOD/2,
-  PULSE_PERIOD, 0, PULSE_PERIOD/4,
-  PULSE_PERIOD, 0, PULSE_PERIOD/32
-};
-uint32_t arr_size = sizeof(dma_data_arr)/sizeof(dma_data_arr[0]);
-
-uint16_t dma_data_arr2[] = {
-  PULSE_PERIOD, 0, PULSE_PERIOD/2,
-  PULSE_PERIOD, 0, PULSE_PERIOD/2,
-  PULSE_PERIOD, 0, PULSE_PERIOD/2,
-  PULSE_PERIOD, 0, PULSE_PERIOD/2
-};
-uint32_t arr_size2 = sizeof(dma_data_arr2)/sizeof(dma_data_arr2[0]);
-
-
 uint16_t sb_power_toggle[] = {
   9024, 0, 9024,
   4512, 0, 0,
@@ -41,9 +21,17 @@ uint16_t sb_power_toggle[] = {
 };
 uint32_t sbpt_arr_size = sizeof(sb_power_toggle)/sizeof(sb_power_toggle[0]);
 
+uint16_t arr[] = {
+  10000, 0, 10000,
+  1000, 0, 0,
+  500, 0, 500
+};
+uint32_t arr_size = sizeof(arr)/sizeof(arr[0]);
+
+
 void send_command(void)
 {
-  send_pulses(sb_power_toggle, sbpt_arr_size);
+  send_pulses(arr, arr_size);
   while(DMA_busy()){
     LL_mDelay(50);
   }

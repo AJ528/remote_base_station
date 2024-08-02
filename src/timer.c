@@ -14,7 +14,8 @@
 #include <stdbool.h>
 
 
-#define TIM16_PERIOD    0x2000
+// #define TIM16_PERIOD    0x4000
+#define TIM16_PERIOD    0x80
 #define TIM17_PERIOD    820
 
 static bool busy_sending_pulses = false;
@@ -34,19 +35,19 @@ void timer_init(void)
   // uint32_t TIM17_period = 820;
   //set TIM17 to 39,024 Hz
   //TODO: verify the frequency is not 38,976 Hz
-  TIM_InitStruct.Prescaler = 0x00;                                     
+  TIM_InitStruct.Prescaler = 0x8000;                                     
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
   TIM_InitStruct.Autoreload = TIM17_PERIOD;                                       
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1; 
   LL_TIM_Init(TIM17, &TIM_InitStruct);
-  LL_TIM_EnableARRPreload(TIM17);
+  // LL_TIM_EnableARRPreload(TIM17);
 
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_InitStruct.CompareValue = TIM17_PERIOD / 2;
+  TIM_OC_InitStruct.CompareValue = TIM17_PERIOD;
   LL_TIM_OC_Init(TIM17, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
-  LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
+  // LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
 
   // LL_TIM_CC_SetDMAReqTrigger(TIM17, LL_TIM_CCDMAREQUEST_UPDATE);
@@ -55,10 +56,11 @@ void timer_init(void)
   // LL_TIM_EnableDMAReq_UPDATE(TIM17);
   // NVIC_SetPriority(TIM17_IRQn, 3);
 
-  LL_TIM_EnableCounter(TIM17);
+  // LL_TIM_EnableCounter(TIM17);
   LL_TIM_EnableAllOutputs(TIM17);
   
-  TIM_InitStruct.Prescaler = 0x0020;                                     
+  // TIM_InitStruct.Prescaler = 0x0020;              
+  TIM_InitStruct.Prescaler = 0x7d00;                           
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
   TIM_InitStruct.Autoreload = TIM16_PERIOD;                                       
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1; 
@@ -68,7 +70,7 @@ void timer_init(void)
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_InitStruct.CompareValue = TIM16_PERIOD / 2;
+  TIM_OC_InitStruct.CompareValue = TIM16_PERIOD;
   LL_TIM_OC_Init(TIM16, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_EnablePreload(TIM16, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM16, LL_TIM_CHANNEL_CH1);  
@@ -115,10 +117,13 @@ void send_pulses(uint16_t *pulse_array, uint32_t array_size)
 
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
 
+  LL_TIM_ClearFlag_UPDATE(TIM16);
   LL_TIM_GenerateEvent_UPDATE(TIM16);
-  while(READ_BIT(TIM16->EGR, TIM_EGR_UG));
+  // don't read TIM_EGR_UG here to determine when to trigger the next event
+  // that does not indicate when you can trigger another event
+  // while(READ_BIT(TIM16->EGR, TIM_EGR_UG));
+  while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
   LL_TIM_GenerateEvent_UPDATE(TIM16);
-
   LL_TIM_EnableCounter(TIM16);
 
   busy_sending_pulses = true;
@@ -143,7 +148,7 @@ void TIM16_IRQHandler(void)
     NVIC_DisableIRQ(TIM16_IRQn);
     LL_TIM_DisableIT_UPDATE(TIM16);
     LL_TIM_ClearFlag_UPDATE(TIM16);
-
+    LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
     LL_GPIO_SetPinMode(LED2_GPIO_Port, LED2_Pin, LL_GPIO_MODE_OUTPUT);
 
     busy_sending_pulses = false;
