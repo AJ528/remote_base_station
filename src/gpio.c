@@ -19,13 +19,14 @@ void GPIO_init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOC);
 
   /*Configure GPIO pin Output Level */
-  LL_GPIO_ResetOutputPin(GPIOB, LED1_Pin|LED3_Pin);
+  LL_GPIO_ResetOutputPin(GPIOB, LED1_Pin | LED3_Pin);
+  LL_GPIO_SetOutputPin(GPIOB, LED2_Pin);
 
   /*Configure GPIO pin Output Level */
   LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL3_Pin|RF_SW_CTRL2_Pin|RF_SW_CTRL1_Pin);
 
   /*Configure GPIO pins : LED1_Pin LED2_Pin LED3_Pin */
-  GPIO_InitStruct.Pin = LED1_Pin|LED3_Pin;
+  GPIO_InitStruct.Pin = LED1_Pin | LED2_Pin | LED3_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
@@ -72,19 +73,19 @@ void GPIO_init(void)
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
 
-  /*
-  While the LED2 pin is configured above, it gets reconfigured here to be the TIM17 output.
-  This will let me verify I have everything configured correctly.
-  */
+void GPIO_IR_OUT_init(void)
+{
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
 
-  /*Reconfigure GPIO pins : LED2_Pin */
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
   GPIO_InitStruct.Pin = LED2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_8;
-  // GPIO_InitStruct.Alternate = LL_GPIO_AF_14;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }

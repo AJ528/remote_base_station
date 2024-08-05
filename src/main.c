@@ -26,6 +26,7 @@ int main(void)
   MX_SUBGHZ_Init();
   dma_init();
   timer_init();
+  GPIO_IR_OUT_init();
 
   send_command();
 

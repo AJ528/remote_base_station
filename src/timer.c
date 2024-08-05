@@ -2,20 +2,21 @@
 #include "pin_defs.h"
 #include "mprintf.h"
 
-#include "stm32wl55xx.h"
 #include "stm32wlxx.h"
-#include "stm32wlxx_ll_tim.h"
 
+#include "stm32wlxx_ll_tim.h"
 #include "stm32wlxx_ll_bus.h"
 #include "stm32wlxx_ll_dma.h"
 #include "stm32wlxx_ll_gpio.h"
+
+#include "stm32wlxx_ll_utils.h"
 
 #include <stdint.h>
 #include <stdbool.h>
 
 
 // #define TIM16_PERIOD    0x4000
-#define TIM16_PERIOD    0x80
+#define TIM16_PERIOD    4000
 #define TIM17_PERIOD    820
 
 static bool busy_sending_pulses = false;
@@ -31,46 +32,34 @@ void timer_init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM16);
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM17);
 
-  // uint32_t TIM17_period = 0x0800;
-  // uint32_t TIM17_period = 820;
   //set TIM17 to 39,024 Hz
   //TODO: verify the frequency is not 38,976 Hz
-  TIM_InitStruct.Prescaler = 0x8000;                                     
-  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
-  TIM_InitStruct.Autoreload = TIM17_PERIOD;                                       
-  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1; 
+  LL_TIM_StructInit(&TIM_InitStruct);
+  TIM_InitStruct.Prescaler = 0;     
+  // TIM_InitStruct.Prescaler = 0x1000;                                                              
+  TIM_InitStruct.Autoreload = TIM17_PERIOD;
   LL_TIM_Init(TIM17, &TIM_InitStruct);
-  // LL_TIM_EnableARRPreload(TIM17);
+  LL_TIM_EnableARRPreload(TIM17);
 
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_InitStruct.CompareValue = TIM17_PERIOD;
+  TIM_OC_InitStruct.CompareValue = TIM17_PERIOD/2;
   LL_TIM_OC_Init(TIM17, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
-  // LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
+  LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
-
-  // LL_TIM_CC_SetDMAReqTrigger(TIM17, LL_TIM_CCDMAREQUEST_UPDATE);
-  // LL_TIM_ConfigDMABurst(TIM17, LL_TIM_DMABURST_BASEADDR_ARR, LL_TIM_DMABURST_LENGTH_3TRANSFERS);
-
-  // LL_TIM_EnableDMAReq_UPDATE(TIM17);
-  // NVIC_SetPriority(TIM17_IRQn, 3);
-
-  // LL_TIM_EnableCounter(TIM17);
-  LL_TIM_EnableAllOutputs(TIM17);
   
-  // TIM_InitStruct.Prescaler = 0x0020;              
-  TIM_InitStruct.Prescaler = 0x7d00;                           
-  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;                           
-  TIM_InitStruct.Autoreload = TIM16_PERIOD;                                       
-  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1; 
+  LL_TIM_StructInit(&TIM_InitStruct);
+  TIM_InitStruct.Prescaler = 0x0020;              
+  // TIM_InitStruct.Prescaler = 0x4000;
+  TIM_InitStruct.Autoreload = TIM16_PERIOD;
   LL_TIM_Init(TIM16, &TIM_InitStruct);
   LL_TIM_EnableARRPreload(TIM16);
 
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
-  TIM_OC_InitStruct.CompareValue = TIM16_PERIOD;
+  TIM_OC_InitStruct.CompareValue = TIM16_PERIOD/2;
   LL_TIM_OC_Init(TIM16, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_EnablePreload(TIM16, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM16, LL_TIM_CHANNEL_CH1);  
@@ -80,9 +69,6 @@ void timer_init(void)
 
   LL_TIM_EnableDMAReq_UPDATE(TIM16);
   NVIC_SetPriority(TIM16_IRQn, 3);
-
-  // LL_TIM_EnableCounter(TIM16);
-  LL_TIM_EnableAllOutputs(TIM16);
 }
 
 void dma_init(void)
@@ -124,7 +110,16 @@ void send_pulses(uint16_t *pulse_array, uint32_t array_size)
   // while(READ_BIT(TIM16->EGR, TIM_EGR_UG));
   while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
   LL_TIM_GenerateEvent_UPDATE(TIM16);
+
   LL_TIM_EnableCounter(TIM16);
+  LL_TIM_EnableCounter(TIM17);
+
+  /*
+    There is a bug where if TIM17.MOE is set before TIM16.MOE,
+    IRTIM will output high until TIM17 counts to TIM17.CCR1 
+  */
+  LL_TIM_EnableAllOutputs(TIM16);
+  LL_TIM_EnableAllOutputs(TIM17);
 
   busy_sending_pulses = true;
 }
@@ -141,23 +136,20 @@ void TIM16_IRQHandler(void)
   // if the timer is enabled, that means we just finished sending the second-to-last pulse.
   // enable one pulse mode so the timer stops after the next pulse.
   if(LL_TIM_IsEnabledCounter(TIM16)){
-    LL_GPIO_ResetOutputPin(LED1_GPIO_Port, LED1_Pin);
     LL_TIM_SetOnePulseMode(TIM16, LL_TIM_ONEPULSEMODE_SINGLE);
   }else{  //if the timer is no longer enabled, that means the final pulse just finished.
     LL_TIM_SetOnePulseMode(TIM16, LL_TIM_ONEPULSEMODE_REPETITIVE);
     NVIC_DisableIRQ(TIM16_IRQn);
     LL_TIM_DisableIT_UPDATE(TIM16);
     LL_TIM_ClearFlag_UPDATE(TIM16);
+    LL_TIM_DisableCounter(TIM17);
     LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
     LL_GPIO_SetPinMode(LED2_GPIO_Port, LED2_Pin, LL_GPIO_MODE_OUTPUT);
 
+    LL_GPIO_SetOutputPin(LED1_GPIO_Port, LED1_Pin);
+
     busy_sending_pulses = false;
-    
-    // NVIC_ClearPendingIRQ(TIM16_IRQn);
-    
   }
-
-
 }
 
 void DMA1_Channel1_IRQHandler(void)
@@ -165,11 +157,8 @@ void DMA1_Channel1_IRQHandler(void)
   LL_DMA_ClearFlag_GI1(DMA1);
   LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_1);
 
-  LL_GPIO_SetOutputPin(LED1_GPIO_Port, LED1_Pin);
-
   LL_TIM_ClearFlag_UPDATE(TIM16);
   LL_TIM_EnableIT_UPDATE(TIM16);
-  // NVIC_ClearPendingIRQ(TIM16_IRQn);
   NVIC_EnableIRQ(TIM16_IRQn);
 
 }
