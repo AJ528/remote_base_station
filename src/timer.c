@@ -14,8 +14,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-
-// #define TIM16_PERIOD    0x4000
 #define TIM16_PERIOD    4000
 #define TIM17_PERIOD    820
 
@@ -66,7 +64,6 @@ void timer_init(void)
 
   LL_TIM_CC_SetDMAReqTrigger(TIM16, LL_TIM_CCDMAREQUEST_UPDATE);
   LL_TIM_ConfigDMABurst(TIM16, LL_TIM_DMABURST_BASEADDR_ARR, LL_TIM_DMABURST_LENGTH_3TRANSFERS);
-
   LL_TIM_EnableDMAReq_UPDATE(TIM16);
   NVIC_SetPriority(TIM16_IRQn, 3);
 }
@@ -107,7 +104,6 @@ void send_pulses(uint16_t *pulse_array, uint32_t array_size)
   LL_TIM_GenerateEvent_UPDATE(TIM16);
   // don't read TIM_EGR_UG here to determine when to trigger the next event
   // that does not indicate when you can trigger another event
-  // while(READ_BIT(TIM16->EGR, TIM_EGR_UG));
   while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
   LL_TIM_GenerateEvent_UPDATE(TIM16);
 

@@ -64,22 +64,6 @@ extern const uint32_t MSIRangeTable[16];    /*!< MSI ranges table values     */
   * @}
   */
 
-/** @addtogroup STM32WLxx_System_Exported_Constants
-  * @{
-  */
-
-/**
-  * @}
-  */
-
-/** @addtogroup STM32WLxx_System_Exported_Macros
-  * @{
-  */
-
-/**
-  * @}
-  */
-
 /** @addtogroup STM32WLxx_System_Exported_Functions
   * @{
   */
