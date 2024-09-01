@@ -1,5 +1,6 @@
 #include "IR_lib.h"
 #include "timer.h"
+#include "asm_funcs.h"
 
 #include "stm32wlxx_ll_utils.h"
 
@@ -21,6 +22,9 @@ uint16_t sb_power_toggle[] = {
 };
 uint32_t sbpt_arr_size = sizeof(sb_power_toggle)/sizeof(sb_power_toggle[0]);
 
+
+uint32_t output_buffer_index = 0;
+
 void send_command(void)
 {
   send_pulses(sb_power_toggle, sbpt_arr_size);
@@ -29,7 +33,7 @@ void send_command(void)
   }
 }
 
-int16_t execute_command(const struct command *cmd, bool is_ditto)
+int32_t execute_command(const struct command *cmd, bool is_ditto)
 {
     const struct protocol *protocol_used = cmd->device->prot_used;
     const struct stream_char *cur_char;   //current characteristics
@@ -87,3 +91,89 @@ int16_t execute_command(const struct command *cmd, bool is_ditto)
 
     return (0);
 }
+
+int16_t format_NEC1_command(uint16_t *output_buffer, uint16_t output_buffer_size,
+                           const struct stream_char *cur_char,
+                           const struct command *cmd, bool is_ditto)
+{
+    uint16_t output_buf_index = 0;
+}
+
+int32_t output_buffer_insert(uint16_t *output_buffer, int16_t *enc_time_arr, 
+                        uint32_t enc_time_arr_len, uint16_t repeat_num)
+{
+    switch(enc_time_arr_len){
+    case 0:
+      return (0);
+      break;
+    case 1:{
+      uint16_t abs_val = (uint16_t)abs_int(enc_time_arr[0]);
+      output_buffer[output_buffer_index++] = abs_val;
+      output_buffer[output_buffer_index++] = repeat_num;
+      if(enc_time_arr[0] < 0){
+        output_buffer[output_buffer_index++] = 0;
+      }else{
+        output_buffer[output_buffer_index++] = abs_val;
+      }
+      break;
+    }
+    case 2:{
+      // if both entries are positive or negative
+      if(((enc_time_arr[0] < 0) && (enc_time_arr[1] < 0)) || (!(enc_time_arr[0] < 0) && !(enc_time_arr[1] < 0))){
+        // return an error. I don't want to deal with this.
+        return (-1);
+      }
+      // if the first entry is negative, no repeats allowed
+      if((enc_time_arr[0] < 0) && (repeat_num > 0)){
+        return (-1);
+      }
+      uint16_t abs_val0 = (uint16_t)abs_int(enc_time_arr[0]);
+      uint16_t abs_val1 = (uint16_t)abs_int(enc_time_arr[1]);
+
+      if(enc_time_arr[0] < 0){
+        output_buffer[output_buffer_index++] = abs_val0;
+        output_buffer[output_buffer_index++] = 0;
+        output_buffer[output_buffer_index++] = 0;
+        output_buffer[output_buffer_index++] = abs_val1;
+        output_buffer[output_buffer_index++] = 0;
+        output_buffer[output_buffer_index++] = abs_val1;
+      }else{
+        output_buffer[output_buffer_index++] = abs_val0 + abs_val1;
+        output_buffer[output_buffer_index++] = repeat_num;
+        output_buffer[output_buffer_index++] = abs_val0;
+      }
+      break;
+    }
+    default:
+      return (-1);
+      break;
+    }
+
+    return (0);
+}
+
+// int16_t OLD_format_NEC1_command(uint8_t *output_buffer, uint16_t output_buffer_size,
+//                            const struct stream_char *cur_char,
+//                            const struct command *cmd, bool is_ditto)
+// {
+//     uint16_t output_buf_index = 0;
+//     uint8_t output_bit_index = 8;
+
+//     append_bits(output_buffer, &output_buf_index, &output_bit_index,
+//                 cur_char->lead_in, cur_char->lead_in_len);
+//     if(is_ditto == false){
+//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
+//                     cmd->device->device_id, cmd->device->device_len);
+//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
+//                     cmd->device->subdevice_id, cmd->device->subdevice_len);
+//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
+//                     cmd->function, cmd->function_len);
+//     }
+//     append_bits(output_buffer, &output_buf_index, &output_bit_index,
+//                 cur_char->lead_out, cur_char->lead_out_len);
+
+//     output_buf_index++;
+//     output_buffer[output_buf_index] = 0x00;
+
+//     return (output_buf_index + 1);
+// }

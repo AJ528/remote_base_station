@@ -8,6 +8,8 @@ struct command; //defined in cmd
 
 //stream characteristics
 struct stream_char{
+    // extent_ms is the time a command must take. If done early, do nothing until extent time has passed.
+    // if there is no extent, value will be 0
     uint16_t extent_ms;
     int16_t lead_in[2];
     uint8_t lead_in_len;
