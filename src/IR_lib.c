@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "asm_funcs.h"
 #include "device_protocol_structs.h"
+#include "utils.h"
 
 #include "stm32wlxx_ll_utils.h"
 
@@ -36,6 +37,7 @@ static int32_t encode_number(const struct protocol *protocol, uint32_t number, u
 static uint32_t num_repeating_bits(uint32_t number);
 static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time_arr_len, 
                                     uint16_t repeat_num);
+static int32_t add_extent_delay(uint32_t delay_us);
 static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num,
                                         uint16_t high_time_us);
 static void output_buffer_reset(void);
@@ -108,8 +110,10 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
     return (0);
 }
 
-int16_t format_NEC1_command(const struct command *cmd, bool is_ditto)
+int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
 {
+  int32_t result;
+  uint32_t time_sum = 0;
   const struct protocol *const cur_protocol = &NEC1;
   struct stream_char *cur_char;
   if(is_ditto){
@@ -117,26 +121,54 @@ int16_t format_NEC1_command(const struct command *cmd, bool is_ditto)
   }else{
     cur_char = &(cur_protocol->primary_stream); 
   }
-  convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
+  // encode lead-in
+  result = convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
+  CHECK(result);
+  time_sum += result;
   if(is_ditto == false){
     // encode device ID
-    encode_number(cur_protocol, cmd->device->device_id, cmd->device->device_len);
+    result = encode_number(cur_protocol, cmd->device->device_id, cmd->device->device_len);
+    CHECK(result);
+    time_sum += result;
     // encode subdevice ID
-    encode_number(cur_protocol, cmd->device->subdevice_id, cmd->device->subdevice_len);
+    result = encode_number(cur_protocol, cmd->device->subdevice_id, cmd->device->subdevice_len);
+    CHECK(result);
+    time_sum += result;
     // encode function
-    encode_number(cur_protocol, cmd->function, cmd->function_len);
-
+    result = encode_number(cur_protocol, cmd->function, cmd->function_len);
+    CHECK(result);
+    time_sum += result;
   }
-  convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
+  // encode lead-out
+  result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
+  CHECK(result);
+  time_sum += result;
 
+  if(cur_char->extent_ms != 0){
+    int32_t extent_us = (cur_char->extent_ms) * 1000;
+    int32_t extent_remainder = extent_us - time_sum;
+    if(extent_remainder < 0){
+      //something has gone wrong
+      return (-1);
+    }
+    result = add_extent_delay(extent_remainder);
+    CHECK(result);
+  }
   return (0);
 }
 
+/*
+    this function takes a number and encodes it per the protocol provided
+
+    returns negative number on error, otherwise returns the length of time encoded
+*/
 static int32_t encode_number(const struct protocol *protocol, uint32_t number, uint32_t bitlen)
 {
   uint32_t input_num;
+  int32_t result;
+  int32_t time_sum = 0;
   if(protocol->LSB == false){
-    //change the number to be MSB first
+    //reverse the bit order of the number
     input_num = rev_bit(number, bitlen);
   }else{
     input_num = number;
@@ -148,27 +180,33 @@ static int32_t encode_number(const struct protocol *protocol, uint32_t number, u
   while(bit_index != bitlen){
     //check for repeat bits and encode them
     num_repeats = num_repeating_bits(input_num);
+    //can't repeat longer than the bit length
     if(num_repeats > (bitlen - 1)){
       num_repeats = bitlen - 1;
     }
 
     if(input_num & 0x01){
-      convert_time_array(protocol->enc_one, 2, num_repeats);
+      result = convert_time_array(protocol->enc_one, 2, num_repeats);
     }else{
-      convert_time_array(protocol->enc_zero, 2, num_repeats);
+      result = convert_time_array(protocol->enc_zero, 2, num_repeats);
     }
+
+    CHECK(result);
+    time_sum += (result * (num_repeats + 1));
 
     input_num = input_num >> (num_repeats + 1);
     bit_index += (num_repeats + 1);
   }
-  return (0);
+  return (time_sum);
 }
 
-//  returns the number of times bit 0 is repeated
-//  examples:
-//  0b00001111 - returns 3
-//  0b00101000 - returns 2
-//  0b11111110 - returns 0
+/*  
+    returns the number of times bit 0 is repeated
+    examples:
+    0b00001111 - returns 3
+    0b00101000 - returns 2
+    0b11111110 - returns 0
+*/
 static uint32_t num_repeating_bits(uint32_t number)
 {
   uint32_t num_repeats = 0;
@@ -185,10 +223,17 @@ static uint32_t num_repeating_bits(uint32_t number)
   return num_repeats;
 }
 
+/*
+    this function converts an encoded time array to 0, 1, or 2 output buffer entries
+    the output buffer entries tell us the length, duty cycle, and number of repeats of the timer
+
+    returns negative number on error, otherwise returns the length of time encoded when not repeated
+*/
 static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time_arr_len, 
                             uint16_t repeat_num)
 {
   int32_t result;
+  int32_t time_sum;
     //encoding array should contain 1 or 2 entries, but 0 isn't wrong...
     switch(enc_time_arr_len){
     case 0:
@@ -196,6 +241,7 @@ static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time
       break;
     case 1:{
       uint16_t abs_val = (uint16_t)abs_int(enc_time_arr[0]);
+      time_sum = abs_val;
       if(enc_time_arr[0] < 0){
         result = output_buffer_add_entry(abs_val, repeat_num, 0);
       }else{
@@ -215,6 +261,7 @@ static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time
       }
       uint16_t abs_val0 = (uint16_t)abs_int(enc_time_arr[0]);
       uint16_t abs_val1 = (uint16_t)abs_int(enc_time_arr[1]);
+      time_sum = abs_val0 + abs_val1;
 
       if(enc_time_arr[0] < 0){
         result = output_buffer_add_entry(abs_val0, 0, 0);
@@ -228,39 +275,43 @@ static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time
       return (-1);
       break;
     }
-
-    return result;
+    CHECK(result);
+    return time_sum;
 }
 
-// int16_t OLD_format_NEC1_command(uint8_t *output_buffer, uint16_t output_buffer_size,
-//                            const struct stream_char *cur_char,
-//                            const struct command *cmd, bool is_ditto)
-// {
-//     uint16_t output_buf_index = 0;
-//     uint8_t output_bit_index = 8;
+/*
+    this function adds entries to the end of the output buffer that are dead time
+    this is used when protocols have an extent and are required to take a fixed amount of time to transmit
+*/
+static int32_t add_extent_delay(uint32_t delay_us)
+{
+  int32_t result;
+  uint32_t upper_bytes = delay_us >> 16;
 
-//     append_bits(output_buffer, &output_buf_index, &output_bit_index,
-//                 cur_char->lead_in, cur_char->lead_in_len);
-//     if(is_ditto == false){
-//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
-//                     cmd->device->device_id, cmd->device->device_len);
-//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
-//                     cmd->device->subdevice_id, cmd->device->subdevice_len);
-//         append_bits(output_buffer, &output_buf_index, &output_bit_index,
-//                     cmd->function, cmd->function_len);
-//     }
-//     append_bits(output_buffer, &output_buf_index, &output_bit_index,
-//                 cur_char->lead_out, cur_char->lead_out_len);
+  // if the delay is larger than 0x00FF_FFFF, it can't be contained in only 2 buffer entries
+  // also, that means the delay is longer than 16 seconds. Throw an error
+  if((upper_bytes & 0xFF00) != 0){
+    return(-1);
+  }
 
-//     output_buf_index++;
-//     output_buffer[output_buf_index] = 0x00;
+  // largest output buffer entry can only be 16 bits, but delay time can be larger than that
 
-//     return (output_buf_index + 1);
-// }
-
+  // if the delay time is longer than 16 bits
+  if(upper_bytes != 0){
+    result = output_buffer_add_entry(0xFFFF, upper_bytes, 0);
+    CHECK(result);
+  }
+  uint16_t lower_bytes = delay_us & 0x0000FFFF;
+  result = output_buffer_add_entry(lower_bytes, 0, 0);
+  return result;
+}
 
 static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num, uint16_t high_time_us)
 {
+  if(period_us == 0){
+    return (0);
+  }
+
   output_buffer[output_buffer_index] = period_us;
   output_buffer[output_buffer_index + 1] = repeat_num;
   output_buffer[output_buffer_index + 2] = high_time_us;

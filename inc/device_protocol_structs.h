@@ -17,7 +17,7 @@ struct stream_char{
     uint8_t lead_out_len;
 };
 
-typedef int16_t format_func(uint8_t *, uint16_t, const struct stream_char *, const struct command *, bool);
+typedef int32_t format_func(const struct command *, bool);
 
 struct protocol{
     uint16_t carrier_freq;
