@@ -112,6 +112,10 @@ int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
     result = encode_number(cur_protocol, cmd->function, cmd->function_len);
     CHECK(result);
     time_sum += result;
+    // encode the inverse function
+    result = encode_number(cur_protocol, ~(cmd->function), cmd->function_len);
+    CHECK(result);
+    time_sum += result;
   }
   // encode lead-out
   result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
@@ -155,8 +159,8 @@ static int32_t encode_number(const struct protocol *protocol, uint32_t number, u
     //check for repeat bits and encode them
     num_repeats = num_repeating_bits(input_num);
     //can't repeat longer than the bit length
-    if(num_repeats > (bitlen - 1)){
-      num_repeats = bitlen - 1;
+    if(num_repeats > (bitlen - bit_index - 1)){
+      num_repeats = bitlen - bit_index - 1;
     }
 
     if(input_num & 0x01){
@@ -187,7 +191,7 @@ static uint32_t num_repeating_bits(uint32_t number)
   uint32_t bit0 = number & 0x01;
   uint32_t tmp_num = number >> 1;
 
-  while(tmp_num & bit0){
+  while((tmp_num & 0x01) == bit0){
     num_repeats++;
     tmp_num = tmp_num >> 1;
     if(num_repeats == 31){
