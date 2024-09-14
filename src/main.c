@@ -5,12 +5,15 @@
 #include "uart.h"
 #include "timer.h"
 #include "IR_lib.h"
+#include "cmd_assoc_structs.h"
 
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
 
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
+
+#include <stdbool.h>
 
 void Error_Handler(void);
 
@@ -28,7 +31,7 @@ int main(void)
   timer_init();
   GPIO_IR_OUT_init();
 
-  send_command();
+  execute_command(&SB_PWR_TOG, false);
 
 #if (RX_MODE == 1)
   // continuous_rx();

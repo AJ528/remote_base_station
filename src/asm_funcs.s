@@ -3,6 +3,7 @@
 .thumb
 
   .section .text.abs_int
+  .global abs_int
   .type abs_int, STT_FUNC
   // uint32_t abs_int(int32_t num)
   // returns the absolute values of num
@@ -14,6 +15,7 @@ abs_int:
 
 
   .section .text.rev_bit
+  .global rev_bit
   .type rev_bit, STT_FUNC
   // uint32_t rev_bit(uint32_t num, uint32_t bitlen)
   // reverses the bits in a 32-bit number, then right-shifts the number until the
@@ -23,3 +25,5 @@ rev_bit:
   rsb   r1, #32       // subtract the bitlen from 32 to get the number of LSRs to do
   lsr   r0, r2, r1    // LSR the number in r2 by r1 and store the result in r0
   bx    lr            // return from subroutine
+
+  

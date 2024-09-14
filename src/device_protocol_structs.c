@@ -47,7 +47,6 @@ const struct protocol NEC1 =
   .lead_out = {564},
   .lead_out_len = 1
  },
- // TODO: add format function
-//  .fmt_func = format_NEC1_command
+ .fmt_func = format_NEC1_command
 };
 

@@ -27,4 +27,6 @@ struct command{
     const struct device *device;
 };
 
+extern const struct command SB_PWR_TOG;
+
 #endif /* __CMD_ASSOC_STRUCTS_H */

@@ -39,7 +39,9 @@ struct device{
 };
 
 extern const struct device toshiba_tv;
+extern const struct device soundbar;
 extern const struct protocol NEC1;
+
 
 
 #endif /* __DEVICE_PROTOCOL_STRUCTS_H */

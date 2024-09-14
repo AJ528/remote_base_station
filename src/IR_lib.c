@@ -33,6 +33,7 @@ uint16_t sb_power_toggle[] = {
 };
 uint32_t sbpt_arr_size = sizeof(sb_power_toggle)/sizeof(sb_power_toggle[0]);
 
+static void send_command(void);
 static int32_t encode_number(const struct protocol *protocol, uint32_t number, uint32_t bitlen);
 static uint32_t num_repeating_bits(uint32_t number);
 static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time_arr_len, 
@@ -42,7 +43,7 @@ static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num,
                                         uint16_t high_time_us);
 static void output_buffer_reset(void);
 
-void send_command(void)
+static void send_command(void)
 {
   // send_pulses(sb_power_toggle, sbpt_arr_size);
   send_pulses(output_buffer, output_buffer_index);
@@ -54,22 +55,9 @@ void send_command(void)
 int32_t execute_command(const struct command *cmd, bool is_ditto)
 {
     const struct protocol *protocol_used = cmd->device->prot_used;
-    const struct stream_char *cur_char;   //current characteristics
-    const uint32_t SMCLK_freq = CS_getSMCLK();
-    uint16_t extent;
+    // const struct stream_char *cur_char;   //current characteristics
+    // const uint32_t SMCLK_freq = CS_getSMCLK();
 
-    if(is_ditto){
-        if(protocol_used->has_ditto == true){
-            cur_char = &(protocol_used->ditto_stream);
-            extent = cmd->device->prot_used->ditto_stream.extent_ms;
-        }else{
-            cur_char = &(protocol_used->primary_stream);
-            extent = cmd->device->prot_used->primary_stream.extent_ms;
-        }
-    }else{
-        cur_char = &(protocol_used->primary_stream);
-        extent = cmd->device->prot_used->primary_stream.extent_ms;
-    }
 /*
     //set up carrier freq and SPI timing
     stop_carrier_wave();
@@ -77,35 +65,20 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
 
     disable_SPI();
     set_unit_freq(SMCLK_freq, protocol_used->unit_freq);
+*/
 
 
-    int16_t result = protocol_used->fmt_func(output_buf, OUTPUT_BUF_SIZE, cur_char, cmd, is_ditto);
+    int32_t result = protocol_used->fmt_func(cmd, is_ditto);
+    CHECK(result);
 
-    if(result < 0)
-        return result;
+    send_command();
 
-    if(extent != 0)
-        start_extent_timer(extent);
-    else
-        set_extent_passed();
 
-    TXData_size = result;
-    TXData_index = 0;
-    enable_SPI();
-    enable_SPI_int();
 
     //enter LPM0 and wait for command to execute
-    __bis_SR_register(LPM0_bits);
+    // __bis_SR_register(LPM0_bits);
 
-    clear_buffer(output_buf, TXData_size);
-
-    if(extent_passed() == false){
-        //enter LPM3 and wait for the extent time period to pass
-        __bis_SR_register(LPM3_bits);
-    }
-
-    reset_extent_passed();
-*/
+    output_buffer_reset();
 
     return (0);
 }
@@ -116,6 +89,7 @@ int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
   uint32_t time_sum = 0;
   const struct protocol *const cur_protocol = &NEC1;
   struct stream_char *cur_char;
+  // because NEC1 has a special way to handle dittos, determine which stream characteristics to use
   if(is_ditto){
     cur_char = &(cur_protocol->ditto_stream);
   }else{
