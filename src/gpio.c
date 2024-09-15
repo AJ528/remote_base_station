@@ -65,7 +65,7 @@ void GPIO_init(void)
 
   LL_GPIO_Init(BUTTON_SW3_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : T_VCP_RX_Pin T_VCP_TX_Pin */
+  /*Configure GPIO pins : LPUART1 TX & RX */
   GPIO_InitStruct.Pin = T_VCP_RX_Pin|T_VCP_TX_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;

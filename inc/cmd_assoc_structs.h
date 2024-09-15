@@ -28,5 +28,8 @@ struct command{
 };
 
 extern const struct command SB_PWR_TOG;
+extern const struct command SB_VLUP;
+extern const struct command SB_VLDN;
+extern const struct command SB_MUTE;
 
 #endif /* __CMD_ASSOC_STRUCTS_H */

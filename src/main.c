@@ -32,6 +32,8 @@ int main(void)
   GPIO_IR_OUT_init();
 
   execute_command(&SB_PWR_TOG, false);
+  // execute_command(&SB_VLUP, false);
+
 
 #if (RX_MODE == 1)
   // continuous_rx();

@@ -9,31 +9,17 @@
 #include <stdint.h>
 
 
-#define   NUM_ENTRIES   32
+// This is the maximum number of entries the output buffer can hold
+// Each entry takes up 6 bytes
+#define   MAX_ENTRIES   32
 
-static uint16_t output_buffer[NUM_ENTRIES * 3] = {0};
-
+// Output buffer to hold the timer period, duty cycle, and repetition information.
+// Once completed, the output buffer is sent to the timer module to correctly blink the IR LED.
+static uint16_t output_buffer[MAX_ENTRIES * 3] = {0};
 static const uint32_t output_buffer_size = (sizeof(output_buffer) / sizeof(output_buffer[0]));
-
 static uint32_t output_buffer_index = 0;
 
-uint16_t sb_power_toggle[] = {
-  9024, 0, 9024,
-  4512, 0, 0,
-  1128, 7, 564,
-  2256, 7, 564,
-  1128, 5, 564,
-  2256, 0, 564,
-  1128, 0, 564,
-  2256, 5, 564,
-  1128, 0, 564,
-  2256, 0, 564,
-  564, 0 , 564,
-  40320, 0, 0
-};
-uint32_t sbpt_arr_size = sizeof(sb_power_toggle)/sizeof(sb_power_toggle[0]);
-
-static void send_command(void);
+// Private Function Declarations
 static int32_t encode_number(const struct protocol *protocol, uint32_t number, uint32_t bitlen);
 static uint32_t num_repeating_bits(uint32_t number);
 static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time_arr_len, 
@@ -43,23 +29,17 @@ static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num,
                                         uint16_t high_time_us);
 static void output_buffer_reset(void);
 
-static void send_command(void)
-{
-  // send_pulses(sb_power_toggle, sbpt_arr_size);
-  send_pulses(output_buffer, output_buffer_index);
-  while(DMA_busy()){
-    LL_mDelay(50);
-  }
-}
-
 int32_t execute_command(const struct command *cmd, bool is_ditto)
 {
-    const struct protocol *protocol_used = cmd->device->prot_used;
-    // const struct stream_char *cur_char;   //current characteristics
-    // const uint32_t SMCLK_freq = CS_getSMCLK();
+  const struct protocol *protocol_used = cmd->device->prot_used;
 
+  
+  //TODO: set the correct carrier-wave frequency
 /*
     //set up carrier freq and SPI timing
+
+    const uint32_t SMCLK_freq = CS_getSMCLK();
+
     stop_carrier_wave();
     enable_carrier_wave(SMCLK_freq, protocol_used->carrier_freq);
 
@@ -68,19 +48,18 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
 */
 
 
-    int32_t result = protocol_used->fmt_func(cmd, is_ditto);
-    CHECK(result);
+  int32_t result = protocol_used->fmt_func(cmd, is_ditto);
+  CHECK(result);
 
-    send_command();
+  send_pulses(output_buffer, output_buffer_index);
+  while(DMA_busy()){
+    // enter LPM here?
+    LL_mDelay(50);
+  }
 
+  output_buffer_reset();
 
-
-    //enter LPM0 and wait for command to execute
-    // __bis_SR_register(LPM0_bits);
-
-    output_buffer_reset();
-
-    return (0);
+  return (0);
 }
 
 int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
@@ -284,21 +263,26 @@ static int32_t add_extent_delay(uint32_t delay_us)
   return result;
 }
 
+/*
+    This function adds an entry to output buffer if there is space.
+
+    returns 0 if successful, -1 if the buffer is full
+*/
 static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num, uint16_t high_time_us)
 {
   if(period_us == 0){
     return (0);
   }
 
-  output_buffer[output_buffer_index] = period_us;
-  output_buffer[output_buffer_index + 1] = repeat_num;
-  output_buffer[output_buffer_index + 2] = high_time_us;
-
-  if((output_buffer_index + 3) < output_buffer_size){
-    output_buffer_index += 3;
+  // this assumes (output_buffer_size) mod (3) always equals 0
+  // and output_buffer_index always stays aligned
+  if(output_buffer_index < output_buffer_size){
+    output_buffer[output_buffer_index++] = period_us;
+    output_buffer[output_buffer_index++] = repeat_num;
+    output_buffer[output_buffer_index++] = high_time_us;
     return (0);
   }else{
-    return(-1);
+    return (-1);
   }
 }
 
