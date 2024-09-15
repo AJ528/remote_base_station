@@ -84,6 +84,8 @@ VPATH = $(SRC_DIRS)
 CC = arm-none-eabi-gcc
 # objcopy you want to use
 OBJCOPY =  arm-none-eabi-objcopy
+# size you want to use
+SIZE = arm-none-eabi-size
 
 # cpu target and instruction set
 COMMON_FLAGS = -mcpu=cortex-m4
@@ -163,6 +165,7 @@ DEPS := $(addprefix $(DEP_DIR)/, $(addsuffix .d, $(notdir $(basename $(DEP_SRCS)
 # it gets called everytime this rule is ran.
 $(TARGET_ELF): $(OBJS) pdebug | $(BIN_DIR)
 	$(CC) -o $@ $(OBJS) $(LDFLAGS)
+	$(SIZE) $(TARGET_ELF)
 
 # rule for turning the .elf program into a binary.The prerequisites are the ELF file
 # and the existence of the binary directory. 
