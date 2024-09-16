@@ -43,81 +43,99 @@ static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz);
 static HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz);
 
-HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz)
+HAL_StatusTypeDef subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	HAL_StatusTypeDef result;
 
-	const uint8_t standby_clock = 0x00;		//sets the standby clock to be RC 13 MHz
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_STANDBY, &standby_clock, sizeof(standby_clock));
+	// set the standby clock
+	// 0x00 = 13 MHz internal RC oscillator
+	// 0x01 = High Speed 32 MHz external oscillator (HSE32)
+	const uint8_t standby_clock = 0x00;		
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_STANDBY, &standby_clock, 1);
 	if(result != HAL_OK){
 		return result;
 	}
 
+	// set the relative locations of the TX and RX buffers inside the 256-byte data buffer
+	// default is TX addr = 0x80 and RX addr = 0x00 ({0x80, 0x00})
 	const uint8_t buf_base_addr[2] = {0x80, 0x00};
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_BUFFERBASEADDRESS, buf_base_addr, sizeof(buf_base_addr));
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_BUFFERBASEADDRESS, buf_base_addr, 2);
 	if(result != HAL_OK){
 		return result;
 	}
 
+	// set the format of the packets that will be transmitted/received
+	// 0x00 = FSK packet
+	// 0x01 = LoRa packet
+	// 0x02 = BPSK packet
+	// 0x03 = MSK packet
 	const uint8_t packet_type  = 0x00;
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETTYPE, &packet_type, sizeof(packet_type));
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETTYPE, &packet_type, 1);
 	if(result != HAL_OK){
 		return result;
 	}
 
+	// set the sync word the radio will listen for
+	// receiving a preamble followed by this pattern of data tells the radio a transmission has started
+	// syncwords can be a max of 64 bits long. The syncword length is set via the Set_PacketParams() command.
 	const uint8_t syncword[] = {0x48, 0xDF, 0x70, 0x72, 0x00, 0x00, 0x00, 0x00};
 	result = HAL_SUBGHZ_WriteRegisters(hsubghz, SYNCWORD_BASEADDRESS, syncword, sizeof(syncword));
 	if(result != HAL_OK){
 		return result;
 	}
 
-	result = SetAddress(hsubghz, ADDRESS);
-	if(result != HAL_OK){
-		return result;
-	}
-
+	// set the default CRC values to be used when error-checking the received packets.
+	// CRC verification is enabled via the Set_PacketParams() command.
 	result = DefaultCRC(hsubghz);
 	if(result != HAL_OK){
 		return result;
 	}
 
+	uint8_t payload_len;
 #if (RX_MODE == 1)
-	uint8_t payload_len = 18;
+	payload_len = 18;
 #endif
 #if (TX_MODE == 1)
-	uint8_t payload_len = 3;
+	payload_len = 3;
 #endif
-
-
-	// with variable length payloads in RX mode, the length set here is the
-	// max payload length accepted before an error is asserted
-	// in TX mode, this sets the length of the payload
-	result = SetPayloadLength(hsubghz, payload_len);
+	// set the payload length
+	// when receiving variable-length packets, the length set here is the max allowed before error
+	// variable length packets are enabled via the Set_PacketParams() command (called in SetPayloadLength()).
+	result = subghz_setPayloadLength(hsubghz, payload_len);
 	if(result != HAL_OK){
 		return result;
 	}
 
 #if (TX_MODE == 1)
+	// configure the output power and power amplifier used when transmitting
 	result = DefaultTxConfig(hsubghz);
 	if(result != HAL_OK){
 		return result;
 	}
 #endif
 
+	// set the default modulation parameters (bit rate, frequency deviation, rx bandwidth)
 	result = DefaultModulationParams(hsubghz);
+	if(result != HAL_OK){
+		return result;
+	}
+
+	// set the frequency of the carrier wave
+	result = subghz_setFrequency(hsubghz, RF_FREQ);
 	return result;
 }
 
-HAL_StatusTypeDef SetAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address)
+HAL_StatusTypeDef subghz_setAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address)
 {
 	return HAL_SUBGHZ_WriteRegisters(hsubghz, NODE_ADDRESS_REG, &address, sizeof(address));
 }
 
-void subghz_radio_getstatus(void)
+uint8_t subghz_radio_getstatus(void)
 {
-	uint8_t RadioResult = 0x00;
-	HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_STATUS, &RadioResult, 1);
-  	printf_("RR: 0x%02x\r\n", RadioResult);
+	uint8_t RadioStatus;
+	HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_STATUS, &RadioStatus, 1);
+	printf_("Radio Status: %#04x\r\n", RadioStatus);
+	return RadioStatus;
 }
 
 void subghz_radio_getRxBufferStatus(void)
@@ -125,7 +143,7 @@ void subghz_radio_getRxBufferStatus(void)
 	uint8_t buf[3] = {0};
 
 	HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_RXBUFFERSTATUS, buf, sizeof(buf));
-  	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
+	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
 }
 
 void subghz_radio_getPacketStatus(uint8_t *buffer, bool print)
@@ -180,19 +198,20 @@ int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
   return 0;
 }
 
-HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length)
+HAL_StatusTypeDef subghz_setPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length)
 {
 	HAL_StatusTypeDef result;
 
 	struct sRadioParams params = {
-		.PbLength = 32,
-		.PbDetLength = 0x07,
-		.SyncWordLength = 32,
-		.AddrComp = 0x01,		// filter on node address
-		.PktType = 1,
-		.PayloadLength = length,
-		.CrcType = 2,			// 2 byte CRC
-		.Whitening = 0
+		.PbLength = 32,						// send a preamble 32-bits long
+		.PbDetLength = 0x07,			// detect a preamble 32-bits long
+		.SyncWordLength = 32,			// the sync word length is 32 bits
+		.AddrComp = 0x01,					// filter on node address (ignore packets that don't match our address)
+		.PktType = 1,							// enable variable-length payloads
+		.PayloadLength = length,	// set the max payload length that can be received without error (RX-mode)
+															// otherwise, sets the payload length that will be transmitted (TX-mode)
+		.CrcType = 2,							// enables CRC verification, and sets the CRC length to 2 bytes
+		.Whitening = 0						// disables whitening
 	};
 
 	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_PACKETPARAMS, (uint8_t*)&params, 9);
@@ -200,10 +219,9 @@ HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length
 	return result;
 }
 
-HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency)
+// sets the carrier wave frequency. Also limits the frequency to acceptable values.
+HAL_StatusTypeDef subghz_setFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency)
 {
-    uint8_t buf[4];
-    uint32_t chan = 0;
 	HAL_StatusTypeDef result;
 	const uint32_t freq_lower_limit = 902000000;
 	const uint32_t freq_upper_limit = 928000000;
@@ -215,21 +233,24 @@ HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequen
 		frequency = freq_upper_limit;
 	}
 
+	// RF-PLL channel value
+	uint32_t channel;
+	uint8_t buffer[4];
+	// calculate the channel value from the desired frequency
+	SX_FREQ_TO_CHANNEL(channel, frequency);
+	// store the calculated value in the buffer
+	buffer[0] = ( uint8_t )( ( channel >> 24 ) & 0xFF );
+	buffer[1] = ( uint8_t )( ( channel >> 16 ) & 0xFF );
+	buffer[2] = ( uint8_t )( ( channel >> 8 ) & 0xFF );
+	buffer[3] = ( uint8_t )( channel & 0xFF );
 
-    SX_FREQ_TO_CHANNEL(chan, frequency);
-    buf[0] = ( uint8_t )( ( chan >> 24 ) & 0xFF );
-    buf[1] = ( uint8_t )( ( chan >> 16 ) & 0xFF );
-    buf[2] = ( uint8_t )( ( chan >> 8 ) & 0xFF );
-    buf[3] = ( uint8_t )( chan & 0xFF );
-
-    result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RFFREQUENCY, buf, 4);
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_RFFREQUENCY, buffer, 4);
 	if(result != HAL_OK){
 		return result;
 	}
 
 	// calibrate after setting frequency
 	// calibrate for center frequency +/- 4 MHz
-
 	const uint32_t delta_freq = 4000000;
 
 	uint32_t upper_freq = frequency + delta_freq;
@@ -252,11 +273,11 @@ static HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
 	static const uint8_t CRC_init[2] = {0x1D, 0x0F};
 	static const uint8_t CRC_poly[2] = {0x10, 0x21};
 
-	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_INIT_MSB_REG, CRC_init, sizeof(CRC_init));
+	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_INIT_MSB_REG, CRC_init, 2);
 	if(result != HAL_OK){
 		return result;
 	}
-	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_POLY_MSB_REG, CRC_poly, sizeof(CRC_poly));
+	result = HAL_SUBGHZ_WriteRegisters(hsubghz, CRC_POLY_MSB_REG, CRC_poly, 2);
 	return result;
 
 
@@ -264,19 +285,21 @@ static HAL_StatusTypeDef DefaultCRC(SUBGHZ_HandleTypeDef *hsubghz)
 
 static HAL_StatusTypeDef DefaultModulationParams(SUBGHZ_HandleTypeDef *hsubghz)
 {
-    uint8_t buf[8] = {0};
-
+	uint8_t buf[8] = {0};
+	// calculate the value of BR from the clock freq and desired bit rate
 	uint32_t tempVal = ( uint32_t )(( 32 * XTAL_FREQ ) / BIT_RATE );
-	buf[0] = ( tempVal >> 16 ) & 0xFF;		// BR
+	buf[0] = ( tempVal >> 16 ) & 0xFF;	// BR
 	buf[1] = ( tempVal >> 8 ) & 0xFF;		// BR
-	buf[2] = tempVal & 0xFF;				// BR
-	buf[3] = 0;					// modulation
-	buf[4] = 0x13;				// RX bandwidth
-	//calculate Fdev
+	buf[2] = tempVal & 0xFF;						// BR
+	// set the pulse-shape filter
+	buf[3] = 0;						// no filter
+	// set the RX filter bandwidth
+	buf[4] = 0x0B;				// RX bandwidth of 117 kHz
+	//calculate Fdev from the desired frequency deviation
 	SX_FREQ_TO_CHANNEL(tempVal, FREQ_DEVIATION);
-	buf[5] = ( tempVal >> 16 ) & 0xFF;		// FDev
+	buf[5] = ( tempVal >> 16 ) & 0xFF;	// FDev
 	buf[6] = ( tempVal >> 8 ) & 0xFF;		// FDev
-	buf[7] = ( tempVal& 0xFF );				// FDev
+	buf[7] = ( tempVal& 0xFF );					// FDev
 
 	return(HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_SET_MODULATIONPARAMS, buf, 8));
 }
@@ -304,16 +327,17 @@ static HAL_StatusTypeDef DefaultTxConfig(SUBGHZ_HandleTypeDef *hsubghz)
 	return result;
 }
 
-HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source)
+HAL_StatusTypeDef subghz_setIRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source)
 {
 	HAL_StatusTypeDef result;
 	uint8_t buf[8] = {0};
 
-	// store the 16-bit values in big-endian format
+	// store the 16-bit value twice in big-endian format
+	// overall takes up 4 bytes
 	buf[0] = buf[2] = (uint8_t)(radio_irq_source >> 8);
 	buf[1] = buf[3] = (uint8_t)radio_irq_source;
 
-	// final 4 bytes can remain zero, they don't matter
-	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, sizeof(buf));
+	// the final 4 bytes can remain zero, they don't matter
+	result = HAL_SUBGHZ_ExecSetCmd(hsubghz, RADIO_CFG_DIOIRQ, buf, 8);
 	return result;
 }

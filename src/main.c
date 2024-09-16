@@ -26,7 +26,7 @@ int main(void)
   /* Initialize all configured peripherals */
   GPIO_init();
   UART_init();
-  MX_SUBGHZ_Init();
+  subghz_init();
   dma_init();
   timer_init();
   GPIO_IR_OUT_init();

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ADDRESS						0x5A
+#define OWN_ADDRESS						0x5A
 
 #define RF_FREQ						915000000
 #define BIT_RATE					50000
@@ -29,11 +29,12 @@ typedef enum
   RADIO_SWITCH_RFO_HP = 3,
 }BSP_RADIO_Switch_TypeDef;
 
-HAL_StatusTypeDef subghz_default_init(SUBGHZ_HandleTypeDef *hsubghz);
-HAL_StatusTypeDef SetPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
-HAL_StatusTypeDef SetAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
-HAL_StatusTypeDef SetRfFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
-HAL_StatusTypeDef SUBGHZ_Radio_Set_IRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
+HAL_StatusTypeDef subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz);
+HAL_StatusTypeDef subghz_setPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
+HAL_StatusTypeDef subghz_setAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
+uint8_t subghz_radio_getstatus(void);
+HAL_StatusTypeDef subghz_setFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
+HAL_StatusTypeDef subghz_setIRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
 void subghz_radio_getPacketStatus(uint8_t *buffer, bool print);
 int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config);
 

@@ -29,31 +29,34 @@
 SUBGHZ_HandleTypeDef subghz_handle;
 
 
-static void subghz_irq_init(void);
+static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz);
 
 
-void MX_SUBGHZ_Init(void)
+void subghz_init(void)
 {
+	// enable clocks
 	LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
-    LL_RCC_HSE_EnableTcxo();
-    LL_RCC_HSE_Enable();
+	LL_RCC_HSE_EnableTcxo();
+	LL_RCC_HSE_Enable();
+	// wait for clock to be ready
+	while (LL_RCC_HSE_IsReady() == 0)
+	{// do nothing
+	}
 
-    while (LL_RCC_HSE_IsReady() == 0)
-    {}
+	// subghz SPI max speed is 16 MHz, but there's no need to go that fast
+	subghz_handle.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
 
-  	subghz_handle.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
-
-	if (HAL_SUBGHZ_Init(&subghz_handle) != HAL_OK)
-	{
+	// init the subghz HAL module
+	if(HAL_SUBGHZ_Init(&subghz_handle) != HAL_OK){
 		printf_("error\r\n");
 	}
-	if(subghz_init(&subghz_handle) != HAL_OK)
-	{
+	// now initialize communication parameters (frequency, bandwidth, packet length, etc.)
+	if(subghz_init_settings(&subghz_handle) != HAL_OK){
 		printf_("error\r\n");
 	}
 
 #if (RX_MODE == 1)
-	subghz_irq_init();
+	subghz_init_irq(&subghz_handle);
 	ConfigRFSwitch(RADIO_SWITCH_RX);
 #endif
 #if (TX_MODE == 1)
@@ -61,42 +64,29 @@ void MX_SUBGHZ_Init(void)
 #endif
 }
 
-HAL_StatusTypeDef subghz_init(SUBGHZ_HandleTypeDef *hsubghz)
+HAL_StatusTypeDef subghz_init_settings(SUBGHZ_HandleTypeDef *hsubghz)
 {
-	uint8_t RadioResult = 0x00;
-	uint8_t RadioMode   = 0x00;
-
 	HAL_StatusTypeDef result;
 
-	subghz_default_init(hsubghz);
+	// initialize the radio settings to reasonable defaults (I don't expect these settings to change)
+	subghz_init_settings_default(hsubghz);
 
-	result = SetRfFrequency(hsubghz, RF_FREQ);
+	// set our own address (when receiving) or the address you want to send data to (when transmitting)
+	// address comparison/filtering is enabled via the Set_PacketParams() command.
+	result = subghz_setAddress(hsubghz, OWN_ADDRESS);
 	if(result != HAL_OK){
 		return result;
 	}
 
-#if (RX_MODE == 1)
-	result = SUBGHZ_Radio_Set_IRQ(hsubghz, SUBGHZ_IRQ_RXDONE | SUBGHZ_IRQ_ERROR);
-	if(result != HAL_OK){
-		return result;
-	}
-#endif
+	// get the status of the radio
+	uint8_t RadioResult = subghz_radio_getstatus();
 	
-	/* Retrieve Status from SUBGHZ Radio */
-	result = HAL_SUBGHZ_ExecGetCmd(hsubghz, RADIO_GET_STATUS, &RadioResult, 1);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	/* Format Mode and Status receive from SUBGHZ Radio */
-	RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
-
-	/* Check if SUBGHZ Radio is in RADIO_MODE_STANDBY_RC mode */
-	if(RadioMode != RADIO_MODE_STANDBY_RC)
-	{
+	//extract the radio mode from the result
+	uint8_t RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
+	// confirm radio is in standby mode using the internal RC oscillator
+	if(RadioMode != RADIO_MODE_STANDBY_RC){
 		return HAL_ERROR;
 	}
-
 	return HAL_OK;
 }
 
@@ -163,8 +153,9 @@ HAL_StatusTypeDef single_rx_blocking(void)
 	return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
 }
 
-static void subghz_irq_init(void)
+static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz)
 {
+	subghz_setIRQ(hsubghz, SUBGHZ_IRQ_RXDONE | SUBGHZ_IRQ_ERROR);
   /* SUBGHZ_Radio_IRQn interrupt configuration */
   NVIC_SetPriority(SUBGHZ_Radio_IRQn, 3);
   NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
@@ -172,5 +163,6 @@ static void subghz_irq_init(void)
 
 void SUBGHZ_Radio_IRQHandler(void)
 {
+	//pass the interrupt to the HAL IRQ handler
   HAL_SUBGHZ_IRQHandler(&subghz_handle);
 }

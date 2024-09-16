@@ -925,7 +925,7 @@ void SUBGHZSPI_Init(uint32_t BaudratePrescaler)
    *       Clock polarity: Low                                                *
    *                phase: 1st Edge                                           *
    *       NSS management: Internal (Done with External bit inside PWR        *
-   *  Communication speed: BaudratePrescaler                             *
+   *  Communication speed: BaudratePrescaler                                  *
    *            First bit: MSB                                                *
    *      CRC calculation: Disable                                            *
    *--------------------------------------------------------------------------*/
