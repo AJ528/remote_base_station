@@ -11,7 +11,7 @@
 
 #define RF_FREQ						915000000
 #define BIT_RATE					50000
-#define FREQ_DEVIATION				25000
+#define FREQ_DEVIATION		25000
 #define XTAL_FREQ					32000000
 
 #define RF_SW_CTRL3_Pin LL_GPIO_PIN_3

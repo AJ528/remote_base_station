@@ -20,16 +20,23 @@ void Error_Handler(void);
 
 int main(void)
 {
-  /* Configure the system clock */
-  SystemClock_Config();
+  /* initialize the subghz module so the voltage of VDD_TCXO can be adjusted */
+  subghz_init();
+
+  /* Configure the system clock to run off HSE32 */
+  sysclk_init();
+
+// TODO: review all code below for suitability before initial programming of custom hardware
 
   /* Initialize all configured peripherals */
   GPIO_init();
   UART_init();
-  subghz_init();
   dma_init();
   timer_init();
   GPIO_IR_OUT_init();
+
+  /* Configure the SUBGHZ module to listen for commands */
+  subghz_config();
 
   execute_command(&SB_PWR_TOG, false);
   // execute_command(&SB_VLUP, false);

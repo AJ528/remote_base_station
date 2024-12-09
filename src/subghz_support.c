@@ -29,12 +29,12 @@ struct __attribute__((__packed__)) sRadioParams {
 };
 
 #define SYNCWORD_BASEADDRESS		0x06C0
-#define NODE_ADDRESS_REG			0x06CD
+#define NODE_ADDRESS_REG				0x06CD
 #define BROADCAST_ADDRESS_REG		0x06CE		
-#define CRC_INIT_MSB_REG			0x06BC
-#define CRC_INIT_LSB_REG			0x06BD
-#define CRC_POLY_MSB_REG			0x06BE
-#define CRC_POLY_LSB_REG			0x06BF
+#define CRC_INIT_MSB_REG				0x06BC
+#define CRC_INIT_LSB_REG				0x06BD
+#define CRC_POLY_MSB_REG				0x06BE
+#define CRC_POLY_LSB_REG				0x06BF
 
 
 extern SUBGHZ_HandleTypeDef subghz_handle;

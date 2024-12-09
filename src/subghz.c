@@ -17,6 +17,8 @@
 #include <stdint.h>
 
 
+#define SMPS_CTRL0_REG_ADDR		0x0916
+
 #define RADIO_MODE_STANDBY_RC       0x02
 #define RADIO_MODE_STANDBY_HSE32	0x03
 #define	RADIO_MODE_FS				0x04
@@ -28,7 +30,7 @@
 
 SUBGHZ_HandleTypeDef subghz_handle;
 
-
+static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz);
 static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz);
 
 
@@ -36,12 +38,6 @@ void subghz_init(void)
 {
 	// enable clocks
 	LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
-	LL_RCC_HSE_EnableTcxo();
-	LL_RCC_HSE_Enable();
-	// wait for clock to be ready
-	while (LL_RCC_HSE_IsReady() == 0)
-	{// do nothing
-	}
 
 	// subghz SPI max speed is 16 MHz, but there's no need to go that fast
 	subghz_handle.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
@@ -50,8 +46,41 @@ void subghz_init(void)
 	if(HAL_SUBGHZ_Init(&subghz_handle) != HAL_OK){
 		printf_("error\r\n");
 	}
-	// now initialize communication parameters (frequency, bandwidth, packet length, etc.)
-	if(subghz_init_settings(&subghz_handle) != HAL_OK){
+
+	/* 	Put the SUBGHZ module into standby mode. Since this is the first command sent 
+			after initialization, the module also goes through calibration (takes 1.6ms) */
+	HAL_StatusTypeDef result;
+	const uint8_t standby_clock = 0x00;		// sets the standby clock to 13MHz internal RC oscillator
+	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_STANDBY, &standby_clock, 1);
+	if(result != HAL_OK){
+		printf_("error\r\n");
+	}
+	/* 	Set VDDTCXO to 2.2V. When combined with the series impedance on the CCA, the TCXO will
+			create a 32MHz clock signal at a safe voltage level for the MCU */
+	const uint8_t tcxo_settings[4] = {0x03, 0x00, 0x00, 0x00};		// sets VDDTCXO to output 2.2V and disables the timeout
+	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TCXOMODE, tcxo_settings, 4);
+	if(result != HAL_OK){
+		printf_("error\r\n");
+	}
+	/* 	Enable the clock detection circuitry. This should automatically disable the onboard SMPS if the HSE32 signal ever fails.
+			The reference manual says it's not necessary when using TCXO powered from VDDTCXO, but it probably doesn't hurt. */
+	const uint8_t clk_detect = 0x40;
+	result = HAL_SUBGHZ_WriteRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, clk_detect);
+	if(result != HAL_OK){
+		printf_("error\r\n");
+	}
+	/* 	Set the SUBGHZ module to use the SMPS when in active modes */
+	const uint8_t regulator_mode = 0x01;		// sets active mode power supply to SMPS
+	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_REGULATORMODE, &regulator_mode, 1);
+	if(result != HAL_OK){
+		printf_("error\r\n");
+	}
+}
+
+void subghz_config(void)
+{
+		// initialize communication parameters (frequency, bandwidth, packet length, etc.)
+	if(subghz_configure_settings(&subghz_handle) != HAL_OK){
 		printf_("error\r\n");
 	}
 
@@ -64,7 +93,7 @@ void subghz_init(void)
 #endif
 }
 
-HAL_StatusTypeDef subghz_init_settings(SUBGHZ_HandleTypeDef *hsubghz)
+static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz)
 {
 	HAL_StatusTypeDef result;
 

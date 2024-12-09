@@ -16,7 +16,7 @@
 #define RX_MODE  1
 
 void subghz_init(void);
-HAL_StatusTypeDef subghz_init_settings(SUBGHZ_HandleTypeDef *hsubghz);
+void subghz_config(void);
 void subghz_write_tx_buffer(uint8_t value);
 HAL_StatusTypeDef tx_packet(void);
 void subghz_read_rx_buffer(void);

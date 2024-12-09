@@ -2,6 +2,6 @@
 #define __SYSCLK_H
 
 
-void SystemClock_Config(void);
+void sysclk_init(void);
 
 #endif /* __SYSCLK_H */
