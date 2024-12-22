@@ -29,17 +29,16 @@ int main(void)
 // TODO: review all code below for suitability before initial programming of custom hardware
 
   /* Initialize all configured peripherals */
-  GPIO_init();
-  UART_init();
-  dma_init();
-  timer_init();
-  GPIO_IR_OUT_init();
+  // GPIO_init();
+  // UART_init();
+  // dma_init();
+  // timer_init();
+  // GPIO_IR_OUT_init();
 
   /* Configure the SUBGHZ module to listen for commands */
-  subghz_config();
+  // subghz_config();
 
-  execute_command(&SB_PWR_TOG, false);
-  // execute_command(&SB_VLUP, false);
+  // execute_command(&SB_PWR_TOG, false);
 
 
 #if (RX_MODE == 1)
@@ -48,8 +47,8 @@ int main(void)
   while (1)
   {
     // subghz_radio_getstatus();
-    single_rx_blocking();
-  	LL_mDelay(500);
+    // single_rx_blocking();
+  	LL_mDelay(50);
 
   }
 #endif

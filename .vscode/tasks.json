@@ -41,7 +41,7 @@
       // "st-util" and probably avoid all this. However, I wanted to practice 
       // integrating with an external gdb server.
       {
-        "label": "start_gdb_server",
+        "label": "start_st-util_gdb_server",
         "type": "shell",
         // calling st-util and passing the arguments "-p 61234" has st-util start
         // the GDB server and listen on port 61234
@@ -89,7 +89,7 @@
       // this task stops st-util's gdb server by sending it a SIGTERM signal
       // this task is called after stopping the debug session
       {
-        "label": "stop_gdb_server",
+        "label": "stop_st-util_gdb_server",
         "type": "shell",
         // pkill allows you to kill a process using its name instead of PID
         // "-15" means send SIGTERM signal
@@ -103,11 +103,11 @@
       },
       // this is a compound task that first recompiles the source code using
       // the "build" task, then starts the gdb server using the
-      // "start_gdb_server" task.
+      // "start_st-util_gdb_server" task.
       {
-        "label": "debug",
+        "label": "debug_eval",
         // "dependsOn" sets the names of tasks this compound task will run
-        "dependsOn":["build", "start_gdb_server"],
+        "dependsOn":["build", "start_st-util_gdb_server"],
         // "dependsOrder" can be "sequence" or "parallel" and controls whether
         // the tasks are run sequentially or in parallel. If run sequentially,
         // the tasks are executed in the order listed in "dependsOn".
