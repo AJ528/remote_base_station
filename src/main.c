@@ -26,10 +26,9 @@ int main(void)
   /* Configure the system clock to run off HSE32 */
   sysclk_init();
 
-// TODO: review all code below for suitability before initial programming of custom hardware
-
   /* Initialize all configured peripherals */
-  // GPIO_init();
+  GPIO_init();
+  // TODO: review all code below for suitability before programming custom hardware
   // UART_init();
   // dma_init();
   // timer_init();
@@ -48,7 +47,8 @@ int main(void)
   {
     // subghz_radio_getstatus();
     // single_rx_blocking();
-  	LL_mDelay(50);
+    LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
+  	LL_mDelay(1000);
 
   }
 #endif

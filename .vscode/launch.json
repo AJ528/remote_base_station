@@ -17,7 +17,7 @@
             // name a function you want to break on entry to
             "runToEntryPoint": "main",
             // debug output
-            "showDevDebugOutput": "raw",
+            "showDevDebugOutput": "none",
             // pick the GDB server type. For a custom server use "external"
             "servertype": "bmp",
             // since we are using a black magic debug probe, we need to specify the serial interface of the GDB server
