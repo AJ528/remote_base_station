@@ -7,6 +7,8 @@
 #include "IR_lib.h"
 #include "cmd_assoc_structs.h"
 
+#include "mprintf.h"
+
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
 
@@ -28,16 +30,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   GPIO_init();
-  // TODO: review all code below for suitability before programming custom hardware
-  // UART_init();
-  // dma_init();
-  // timer_init();
-  // GPIO_IR_OUT_init();
+  UART_init();
+  dma_init();
+  timer_init();
 
   /* Configure the SUBGHZ module to listen for commands */
   // subghz_config();
 
-  // execute_command(&SB_PWR_TOG, false);
+  printf_("about to execute loop!\r\n");
+  execute_command(&SB_PWR_TOG, false);
 
 
 #if (RX_MODE == 1)

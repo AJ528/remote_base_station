@@ -7,6 +7,14 @@
 #define STATUS_LED_CTRL1_PIN            LL_GPIO_PIN_7
 #define STATUS_LED_CTRLN_PORT           GPIOB
 
+#define IR_MOD_PIN                      LL_GPIO_PIN_6
+#define IR_CARRIER_PIN                  LL_GPIO_PIN_7
+#define IR_SIGNALS_PORT                 GPIOA
+
+#define UART_TX_PIN                     LL_GPIO_PIN_2
+#define UART_RX_PIN                     LL_GPIO_PIN_3
+#define UART_PORT                       GPIOA
+
 
 #define LED1_Pin                  LL_GPIO_PIN_15
 #define LED1_GPIO_Port            GPIOB

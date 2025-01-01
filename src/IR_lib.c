@@ -3,6 +3,7 @@
 #include "asm_funcs.h"
 #include "device_protocol_structs.h"
 #include "utils.h"
+#include "gpio.h"
 
 #include "stm32wlxx_ll_utils.h"
 
@@ -51,6 +52,9 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
   int32_t result = protocol_used->fmt_func(cmd, is_ditto);
   CHECK(result);
 
+  // enable the IR LED before use
+  GPIO_IR_Pins_Enable();
+
   send_pulses(output_buffer, output_buffer_index);
   while(DMA_busy()){
     // enter LPM here?
@@ -58,6 +62,9 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
   }
 
   output_buffer_reset();
+
+  // disable the IR LEDs when not in use
+  GPIO_IR_Pins_Disable();
 
   return (0);
 }
