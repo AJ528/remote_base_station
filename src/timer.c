@@ -1,6 +1,7 @@
 #include "timer.h"
 #include "pin_defs.h"
 #include "mprintf.h"
+#include "utils.h"
 
 #include "stm32wlxx.h"
 
@@ -13,6 +14,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+
+#define memset(p, v, n)    memset_((p), (v), (n))
 
 #define TIM16_PERIOD    4000
 #define TIM17_PERIOD    820

@@ -37,7 +37,7 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   // subghz_config();
 
-  printf_("about to execute loop!\r\n");
+  printf_("about to execute loop!\n");
   execute_command(&SB_PWR_TOG, false);
 
 

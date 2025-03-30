@@ -15,6 +15,7 @@ How to send commands from remote to base station? What format to use?
 
 - if a command is sent to toggle sensor 0 led, and no sensor is plugged in, throw an error
 - if a command is sent to toggle sensor 0 led, and sending the command doesn't toggle the led, throw an error
+- if a command is received that cannot be encoded, throw an error
 - try to make it so any error states (even fundamental errors?) end up with the red LED glowing
 
 

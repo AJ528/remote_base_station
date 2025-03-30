@@ -20,7 +20,7 @@ OBJ_DIR = obj
 DEP_DIR = dep
 
 # name of the output image
-TARGET_NAME := output
+TARGET_NAME := remote_base_station
 TARGET_ELF := $(BIN_DIR)/$(TARGET_NAME).elf
 TARGET_BIN := $(BIN_DIR)/$(TARGET_NAME).bin
 
@@ -30,21 +30,22 @@ SRC_DIRS = \
 	src \
 	drivers \
 	drivers/utilities \
-	drivers/stm32wlxx_low_level \
-	drivers/stm32wlxx_HAL
+	drivers/stm32wl_drivers/stm32wlxx_low_level \
+	drivers/stm32wl_drivers/stm32wlxx_HAL
 
 # locations of directories containing header files.
 # these locations should be specified relative to the makefile location.
 INC_DIRS = \
 	inc \
 	drivers/inc \
-	drivers/CMSIS_inc \
-	drivers/device_inc \
-	drivers/stm32wlxx_ll_inc \
-	drivers/stm32wlxx_HAL_inc
+	drivers/stm32wl_drivers/CMSIS_inc \
+	drivers/stm32wl_drivers/device_inc \
+	drivers/stm32wl_drivers/stm32wlxx_ll_inc \
+	drivers/stm32wl_drivers/stm32wlxx_HAL_inc
 
 # predefined macros
 DEFINES = 		\
+	VERSION=$(GIT_VERSION) \
 	STM32WL 	\
 	STM32WL55xx	\
 	CORE_CM4
@@ -55,7 +56,6 @@ DEFINES += USE_FULL_LL_DRIVER
 # sets OPTIMIZE_FLAGS based on debug above
 ifeq ($(debug), 1)
 	DEFINES += DEBUG
-#	OPTIMIZE_FLAGS = -ggdb3 -Og
 	OPTIMIZE_FLAGS = -ggdb3 -O0
 else
 # change optimization options to whatever suits you
@@ -73,19 +73,21 @@ else
 	FLOAT_FLAGS = -mfloat-abi=soft
 endif
 
-# creates the list of define flags to pass to the compiler
-DEFINE_FLAGS := $(addprefix -D,$(DEFINES))
-# creates the list of include flags to pass to the compiler
-INC_FLAGS := $(addprefix -I,$(INC_DIRS))
-# adds the source directories to Make's search path
-VPATH = $(SRC_DIRS)
-
 # compiler you want to use
 CC = arm-none-eabi-gcc
 # objcopy you want to use
 OBJCOPY =  arm-none-eabi-objcopy
 # size you want to use
 SIZE = arm-none-eabi-size
+# command to retrieve software version
+GIT_VERSION = "\"$(shell git describe --tags --long --abbrev=8 --dirty --always)\""
+
+# creates the list of define flags to pass to the compiler
+DEFINE_FLAGS := $(addprefix -D,$(DEFINES))
+# creates the list of include flags to pass to the compiler
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+# adds the source directories to Make's search path
+VPATH = $(SRC_DIRS)
 
 # cpu target and instruction set
 COMMON_FLAGS = -mcpu=cortex-m4
