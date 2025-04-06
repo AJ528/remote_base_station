@@ -50,6 +50,7 @@ int main(void)
   uint8_t i = 0;
 #endif
 
+// infinite loop
   while(1){
 
     // if UART data is present, receive it
