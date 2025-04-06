@@ -72,10 +72,10 @@ void subghz_config(void)
 
 #if (RX_MODE == 1)
   subghz_init_irq(&subghz_handle);
-  ConfigRFSwitch(RADIO_SWITCH_RX);
+  set_RF_switch_RX();
 #endif
 #if (TX_MODE == 1)
-  ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
+  set_RF_switch_TX();
 #endif
 }
 

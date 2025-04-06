@@ -11,13 +11,13 @@
 
 
 // This is the maximum number of entries the output buffer can hold
-// Each entry takes up 6 bytes
+// Each entry is 6 bytes
 #define   MAX_ENTRIES   32
 
 // Output buffer to hold the timer period, duty cycle, and repetition information.
 // Once completed, the output buffer is sent to the timer module to correctly blink the IR LED.
 static uint16_t output_buffer[MAX_ENTRIES * 3] = {0};
-static const uint32_t output_buffer_size = (sizeof(output_buffer) / sizeof(output_buffer[0]));
+static const uint32_t output_buffer_size = COUNT_OF(output_buffer);
 static uint32_t output_buffer_index = 0;
 
 // Private Function Declarations
@@ -123,7 +123,6 @@ int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
 
 /*
     this function takes a number and encodes it per the protocol provided
-
     returns negative number on error, otherwise returns the length of time encoded
 */
 static int32_t encode_number(const struct protocol *protocol, uint32_t number, uint32_t bitlen)
@@ -272,7 +271,6 @@ static int32_t add_extent_delay(uint32_t delay_us)
 
 /*
     This function adds an entry to output buffer if there is space.
-
     returns 0 if successful, -1 if the buffer is full
 */
 static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num, uint16_t high_time_us)

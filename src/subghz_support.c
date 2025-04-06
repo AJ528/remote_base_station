@@ -3,6 +3,7 @@
 #include "subghz_support.h"
 #include "subghz.h"
 #include "error.h"
+#include "pin_defs.h"
 
 #include "stm32wlxx_hal_subghz.h"
 #include "mprintf.h"
@@ -134,42 +135,14 @@ void subghz_radio_getPacketStatus(uint8_t *buffer, bool print)
   }
 }
 
-int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config)
+void set_RF_switch_RX(void)
 {
-  switch (Config)
-  {
-    case RADIO_SWITCH_OFF:
-    {
-      /* Turn off switch */
-    LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL2_Pin | RF_SW_CTRL3_Pin);
-      break;
-    }
-    case RADIO_SWITCH_RX:
-    {
-      /*Turns On in Rx Mode the RF Switch */
-    LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL3_Pin);
-    LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL2_Pin);
-      break;
-    }
-    case RADIO_SWITCH_RFO_LP:
-    {
-      /*Turns On in Tx Low Power the RF Switch */
-    LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL1_Pin | RF_SW_CTRL2_Pin | RF_SW_CTRL3_Pin);
-      break;
-    }
-    case RADIO_SWITCH_RFO_HP:
-    {
-      /*Turns On in Tx High Power the RF Switch */
-    LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL3_Pin);
-    LL_GPIO_ResetOutputPin(GPIOC, RF_SW_CTRL1_Pin);
-    LL_GPIO_SetOutputPin(GPIOC, RF_SW_CTRL2_Pin);
-      break;
-    }
-    default:
-      break;
-  }
+  LL_GPIO_ResetOutputPin(RF_SWITCH_PORT, RF_SWITCH);
+}
 
-  return 0;
+void set_RF_switch_TX(void)
+{
+  LL_GPIO_SetOutputPin(RF_SWITCH_PORT, RF_SWITCH);
 }
 
 HAL_StatusTypeDef subghz_setPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length)

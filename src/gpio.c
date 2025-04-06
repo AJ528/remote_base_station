@@ -1,13 +1,9 @@
 
 #include "gpio.h"
-
 #include "pin_defs.h"
 
-#include "stm32wl55xx.h"
 #include "stm32wlxx_ll_gpio.h"
-#include "stm32wlxx_ll_exti.h"
 #include "stm32wlxx_ll_bus.h"
-#include "stm32wlxx_ll_system.h"
 
 
 void GPIO_init(void)
@@ -17,6 +13,15 @@ void GPIO_init(void)
   /* GPIO Ports Clock Enable */
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOA);
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
+
+  /* Configure GPIO pin for RF Switch */
+  LL_GPIO_ResetOutputPin(RF_SWITCH_PORT, RF_SWITCH);
+
+  GPIO_InitStruct.Pin = RF_SWITCH;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  LL_GPIO_Init(RF_SWITCH_PORT, &GPIO_InitStruct);
 
   /*Configure GPIO pin Output Level */
   LL_GPIO_ResetOutputPin(STATUS_LED_PORT, STATUS_LED_PIN);

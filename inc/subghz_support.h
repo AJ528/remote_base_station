@@ -14,21 +14,6 @@
 #define FREQ_DEVIATION		25000
 #define XTAL_FREQ					32000000
 
-#define RF_SW_CTRL3_Pin LL_GPIO_PIN_3
-#define RF_SW_CTRL3_GPIO_Port GPIOC
-#define RF_SW_CTRL2_Pin LL_GPIO_PIN_5
-#define RF_SW_CTRL2_GPIO_Port GPIOC
-#define RF_SW_CTRL1_Pin LL_GPIO_PIN_4
-#define RF_SW_CTRL1_GPIO_Port GPIOC
-
-typedef enum
-{
-  RADIO_SWITCH_OFF    = 0,
-  RADIO_SWITCH_RX     = 1,
-  RADIO_SWITCH_RFO_LP = 2,
-  RADIO_SWITCH_RFO_HP = 3,
-}BSP_RADIO_Switch_TypeDef;
-
 void subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef subghz_setPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
 HAL_StatusTypeDef subghz_setAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
@@ -36,7 +21,8 @@ uint8_t subghz_radio_getstatus(void);
 HAL_StatusTypeDef subghz_setFrequency(SUBGHZ_HandleTypeDef *hsubghz, uint32_t frequency);
 HAL_StatusTypeDef subghz_setIRQ(SUBGHZ_HandleTypeDef *hsubghz, uint16_t radio_irq_source);
 void subghz_radio_getPacketStatus(uint8_t *buffer, bool print);
-int32_t ConfigRFSwitch(BSP_RADIO_Switch_TypeDef Config);
+void set_RF_switch_RX(void);
+void set_RF_switch_TX(void);
 
 
 #endif /* __SUBGHZ_SUPPORT_H */

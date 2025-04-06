@@ -15,8 +15,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define memset(p, v, n)    memset_((p), (v), (n))
-
 #define TIM16_PERIOD    4000
 #define TIM17_PERIOD    820
 
@@ -142,11 +140,6 @@ void TIM16_IRQHandler(void)
     LL_TIM_DisableIT_UPDATE(TIM16);
     LL_TIM_ClearFlag_UPDATE(TIM16);
     LL_TIM_DisableCounter(TIM17);
-    LL_GPIO_SetOutputPin(LED2_GPIO_Port, LED2_Pin);
-    LL_GPIO_SetPinMode(LED2_GPIO_Port, LED2_Pin, LL_GPIO_MODE_OUTPUT);
-
-    LL_GPIO_SetOutputPin(LED1_GPIO_Port, LED1_Pin);
-
     busy_sending_pulses = false;
   }
 }
