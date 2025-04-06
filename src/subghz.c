@@ -6,23 +6,23 @@
  */
 
 #include "subghz.h"
+#include "stm32wlxx.h"
 #include "subghz_support.h"
+#include "error.h"
+#include "mprintf.h"
 
 #include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_bus.h"
-#include "stm32wlxx_ll_rcc.h"
-
-#include "mprintf.h"
 
 #include <stdint.h>
 
 
-#define SMPS_CTRL0_REG_ADDR		0x0916
+#define SMPS_CTRL0_REG_ADDR         0x0916
 
 #define RADIO_MODE_STANDBY_RC       0x02
-#define RADIO_MODE_STANDBY_HSE32	0x03
-#define	RADIO_MODE_FS				0x04
-#define	RADIO_MODE_RX				0x05
+#define RADIO_MODE_STANDBY_HSE32    0x03
+#define	RADIO_MODE_FS               0x04
+#define	RADIO_MODE_RX               0x05
 #define RADIO_MODE_TX               0x06
 
 #define RADIO_MODE_BITFIELD         0x70
@@ -36,155 +36,136 @@ static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz);
 
 void subghz_init(void)
 {
-	// enable clocks
-	LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
+  // enable clocks
+  LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
 
-	// subghz SPI max speed is 16 MHz, but there's no need to go that fast
-	subghz_handle.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
+  // subghz SPI max speed is 16 MHz, but there's no need to go that fast
+  subghz_handle.Init.BaudratePrescaler = SUBGHZSPI_BAUDRATEPRESCALER_8;
 
-	// init the subghz HAL module
-	if(HAL_SUBGHZ_Init(&subghz_handle) != HAL_OK){
-		printf_("error\r\n");
-	}
+  // init the subghz HAL module
+  ERROR_CHECK(HAL_SUBGHZ_Init(&subghz_handle));
 
-	/* 	Put the SUBGHZ module into standby mode. Since this is the first command sent 
-			after initialization, the module also goes through calibration (takes 1.6ms) */
-	HAL_StatusTypeDef result;
-	const uint8_t standby_clock = 0x00;		// sets the standby clock to 13MHz internal RC oscillator
-	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_STANDBY, &standby_clock, 1);
-	if(result != HAL_OK){
-		printf_("error\r\n");
-	}
-	/* 	Set VDDTCXO to 2.2V. When combined with the series impedance on the CCA, the TCXO will
-			create a 32MHz clock signal at a safe voltage level for the MCU */
-	const uint8_t tcxo_settings[4] = {0x03, 0x00, 0x00, 0x00};		// sets VDDTCXO to output 2.2V and disables the timeout
-	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TCXOMODE, tcxo_settings, 4);
-	if(result != HAL_OK){
-		printf_("error\r\n");
-	}
-	/* 	Enable the clock detection circuitry. This should automatically disable the onboard SMPS if the HSE32 signal ever fails.
-			The reference manual says it's not necessary when using TCXO powered from VDDTCXO, but it probably doesn't hurt. */
-	const uint8_t clk_detect = 0x40;
-	result = HAL_SUBGHZ_WriteRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, clk_detect);
-	if(result != HAL_OK){
-		printf_("error\r\n");
-	}
-	/* 	Set the SUBGHZ module to use the SMPS when in active modes */
-	const uint8_t regulator_mode = 0x01;		// sets active mode power supply to SMPS
-	result = HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_REGULATORMODE, &regulator_mode, 1);
-	if(result != HAL_OK){
-		printf_("error\r\n");
-	}
+  /*  Put the SUBGHZ module into standby mode. Since this is the first command sent 
+      after initialization, the module also goes through calibration (takes 1.6ms) */
+  const uint8_t standby_clock = 0x00; // sets the standby clock to 13MHz internal RC oscillator
+  ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_STANDBY, &standby_clock, 1));
+
+  /*  Set VDDTCXO to 2.2V. When combined with the series impedance on the CCA, the TCXO will
+      create a 32MHz clock signal at a safe voltage level for the MCU */
+  const uint8_t tcxo_settings[4] = {0x03, 0x00, 0x00, 0x00};		// sets VDDTCXO to output 2.2V and disables the timeout
+  ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TCXOMODE, tcxo_settings, 4));
+
+  /*  Enable the clock detection circuitry. This should automatically disable the onboard SMPS if the HSE32 signal ever fails.
+      The reference manual says it's not necessary when using TCXO powered from VDDTCXO, but it probably doesn't hurt. */
+  const uint8_t clk_detect = 0x40;
+  ERROR_CHECK(HAL_SUBGHZ_WriteRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, clk_detect));
+
+  /*  Set the SUBGHZ module to use the SMPS when in active modes */
+  const uint8_t regulator_mode = 0x01;  // sets active mode power supply to SMPS
+  ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_REGULATORMODE, &regulator_mode, 1));
 }
 
 void subghz_config(void)
 {
-		// initialize communication parameters (frequency, bandwidth, packet length, etc.)
-	if(subghz_configure_settings(&subghz_handle) != HAL_OK){
-		printf_("error\r\n");
-	}
+  // initialize communication parameters (frequency, bandwidth, packet length, etc.)
+  ERROR_CHECK(subghz_configure_settings(&subghz_handle));
 
 #if (RX_MODE == 1)
-	subghz_init_irq(&subghz_handle);
-	ConfigRFSwitch(RADIO_SWITCH_RX);
+  subghz_init_irq(&subghz_handle);
+  ConfigRFSwitch(RADIO_SWITCH_RX);
 #endif
 #if (TX_MODE == 1)
-	ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
+  ConfigRFSwitch(RADIO_SWITCH_RFO_LP);
 #endif
 }
 
 static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz)
 {
-	HAL_StatusTypeDef result;
+  // initialize the radio settings to reasonable defaults (I don't expect these settings to change)
+  subghz_init_settings_default(hsubghz);
 
-	// initialize the radio settings to reasonable defaults (I don't expect these settings to change)
-	subghz_init_settings_default(hsubghz);
+  // set our own address (when receiving) or the address you want to send data to (when transmitting)
+  // address comparison/filtering is enabled via the Set_PacketParams() command.
+  ERROR_CHECK(subghz_setAddress(hsubghz, OWN_ADDRESS));
 
-	// set our own address (when receiving) or the address you want to send data to (when transmitting)
-	// address comparison/filtering is enabled via the Set_PacketParams() command.
-	result = subghz_setAddress(hsubghz, OWN_ADDRESS);
-	if(result != HAL_OK){
-		return result;
-	}
-
-	// get the status of the radio
-	uint8_t RadioResult = subghz_radio_getstatus();
-	
-	//extract the radio mode from the result
-	uint8_t RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
-	// confirm radio is in standby mode using the internal RC oscillator
-	if(RadioMode != RADIO_MODE_STANDBY_RC){
-		return HAL_ERROR;
-	}
-	return HAL_OK;
+  // get the status of the radio
+  uint8_t RadioResult = subghz_radio_getstatus();
+  
+  // extract the radio mode from the result
+  uint8_t RadioMode = ((RadioResult & RADIO_MODE_BITFIELD) >> 4);
+  // confirm radio is in standby mode using the internal RC oscillator
+  if(RadioMode != RADIO_MODE_STANDBY_RC){
+    return HAL_ERROR;
+  }
+  return HAL_OK;
 }
 
 void subghz_read_rx_buffer(void)
 {
-	uint8_t buf[16];
+  uint8_t buf[16];
 
-	HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_RXBUFFERSTATUS, buf, 4);
+  HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_RXBUFFERSTATUS, buf, 4);
 
-	uint32_t payload_len = buf[1] + 1;
-  	printf_("Buf Status: %#04x, %#04x, %#04x\r\n", buf[0], buf[1], buf[2]);
-	
-	// read bytes from rx buffer
-	HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], buf, (uint16_t)payload_len);
+  uint32_t payload_len = buf[1] + 1;
+    printfln_("Buf Status: %#04x, %#04x, %#04x", buf[0], buf[1], buf[2]);
+  
+  // read bytes from rx buffer
+  HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], buf, (uint16_t)payload_len);
 
-	uint32_t i;
-	printf_("buf = ");
-	for(i = 0; i < payload_len; i++){
-		printf_("%#04x, ", buf[i]);
-	}
-	printf_("\r\n");
+  uint32_t i;
+  puts_("buf = ");
+  for(i = 0; i < payload_len; i++){
+    printf_("%#04x, ", buf[i]);
+  }
+  print_newline();
 }
 
 void subghz_write_tx_buffer(uint8_t value)
 {
-	uint8_t tx_addr;
-	uint8_t buf[4];
-	uint8_t buf2[3];
-	uint32_t i;
+  uint8_t tx_addr;
+  uint8_t buf[4];
+  uint8_t buf2[3];
+  uint32_t i;
 
-	for(i = 0; i < sizeof(buf); i++){
-		buf[i] = value++;
-	}
-	// get the start address of the tx buffer (I think)
-	HAL_SUBGHZ_ReadRegister(&subghz_handle, 0x0802, &tx_addr);
+  for(i = 0; i < sizeof(buf); i++){
+    buf[i] = value++;
+  }
+  // get the start address of the tx buffer (I think)
+  HAL_SUBGHZ_ReadRegister(&subghz_handle, 0x0802, &tx_addr);
 
-	printf_("tx_addr = %#0x\r\n", tx_addr);
-	
-	// write bytes to the start of the tx buffer
-	HAL_SUBGHZ_WriteBuffer(&subghz_handle, 0x80, buf, sizeof(buf));
+  printfln_("tx_addr = %#0x", tx_addr);
+  
+  // write bytes to the start of the tx buffer
+  HAL_SUBGHZ_WriteBuffer(&subghz_handle, 0x80, buf, sizeof(buf));
 
-	printf_("value = %#04x\r\n", value);
+  printfln_("value = %#04x", value);
 
-	HAL_SUBGHZ_ReadBuffer(&subghz_handle, 0x81, buf2, sizeof(buf2));
+  HAL_SUBGHZ_ReadBuffer(&subghz_handle, 0x81, buf2, sizeof(buf2));
 
-	printf_("buf2 = %#04x\r\n", buf2[1]);
+  printfln_("buf2 = %#04x", buf2[1]);
 }
 
 HAL_StatusTypeDef tx_packet(void)
 {
-	uint8_t RadioCmd[3] = {0xff, 0xff, 0x00};	// disable timeout
-	return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TX, RadioCmd, 3));
+  const uint8_t RadioCmd[3] = {0xff, 0xff, 0x00};	// disable timeout
+  return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TX, RadioCmd, 3));
 }
 
 HAL_StatusTypeDef continuous_rx(void)
 {
-	uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFF};
-	return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
+  const uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFF};
+  return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
 }
 
 HAL_StatusTypeDef single_rx_blocking(void)
 {
-	uint8_t RadioCmd[3] = {0};
-	return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
+  const uint8_t RadioCmd[3] = {0};
+  return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
 }
 
 static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz)
 {
-	subghz_setIRQ(hsubghz, SUBGHZ_IRQ_RXDONE | SUBGHZ_IRQ_ERROR);
+  subghz_setIRQ(hsubghz, SUBGHZ_IRQ_RXDONE | SUBGHZ_IRQ_ERROR);
   /* SUBGHZ_Radio_IRQn interrupt configuration */
   NVIC_SetPriority(SUBGHZ_Radio_IRQn, 3);
   NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
@@ -192,6 +173,6 @@ static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz)
 
 void SUBGHZ_Radio_IRQHandler(void)
 {
-	//pass the interrupt to the HAL IRQ handler
+  // pass the interrupt to the HAL IRQ handler
   HAL_SUBGHZ_IRQHandler(&subghz_handle);
 }

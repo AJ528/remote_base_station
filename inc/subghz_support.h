@@ -29,7 +29,7 @@ typedef enum
   RADIO_SWITCH_RFO_HP = 3,
 }BSP_RADIO_Switch_TypeDef;
 
-HAL_StatusTypeDef subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz);
+void subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz);
 HAL_StatusTypeDef subghz_setPayloadLength(SUBGHZ_HandleTypeDef *hsubghz, uint8_t length);
 HAL_StatusTypeDef subghz_setAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address);
 uint8_t subghz_radio_getstatus(void);

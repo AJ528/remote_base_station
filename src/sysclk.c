@@ -41,8 +41,6 @@ void sysclk_init(void)
   // now that we are running off HSE32, enable the SMPS to improve power efficiency
   LL_PWR_SMPS_Enable();
 
-
-
   LL_RCC_ClocksTypeDef clk_struct;
 
   LL_RCC_GetSystemClocksFreq(&clk_struct);

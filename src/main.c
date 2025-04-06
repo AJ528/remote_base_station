@@ -15,16 +15,17 @@
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
 
+#include <stdint.h>
 #include <stdbool.h>
 
-void Error_Handler(void);
 
+extern uint32_t _vector_table_offset;
 
 int main(void)
 {
+  SCB->VTOR = (uint32_t)(&_vector_table_offset);  // set the vector table offset
   /* initialize the subghz module so the voltage of VDD_TCXO can be adjusted */
   subghz_init();
-
   /* Configure the system clock to run off HSE32 */
   sysclk_init();
 
@@ -49,7 +50,7 @@ int main(void)
     // subghz_radio_getstatus();
     // single_rx_blocking();
     LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
-  	LL_mDelay(1000);
+    LL_mDelay(1000);
 
   }
 #endif
@@ -64,7 +65,7 @@ int main(void)
     LL_mDelay(100);
     subghz_radio_getstatus();
     LL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-  	LL_mDelay(1000);
+    LL_mDelay(1000);
   }
 
 #endif
@@ -77,14 +78,6 @@ int32_t putchar_(char c)
   // once the LPUART_TDR register is empty, fill it with char c
   LL_LPUART_TransmitData8(LPUART1, (uint8_t)c);
   return (c);
-}
-
-void Error_Handler(void)
-{
-  __disable_irq();
-  while (1)
-  {
-  }
 }
 
 #ifdef  USE_FULL_ASSERT
