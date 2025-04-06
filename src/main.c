@@ -3,6 +3,7 @@
 #include "gpio.h"
 #include "subghz.h"
 #include "uart.h"
+#include "mcli.h"
 #include "timer.h"
 #include "IR_lib.h"
 #include "cmd_assoc_structs.h"
@@ -38,37 +39,48 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   // subghz_config();
 
-  printf_("about to execute loop!\n");
+  println_("about to execute loop!");
   execute_command(&SB_PWR_TOG, false);
-
 
 #if (RX_MODE == 1)
   // continuous_rx();
+#endif
 
-  while (1)
-  {
+#if (TX_MODE == 1)
+  uint8_t i = 0;
+#endif
+
+  while(1){
+
+    // if UART data is present, receive it
+    // TODO: trigger this off an interrupt?
+    if(LL_LPUART_IsActiveFlag_RXNE_RXFNE(LPUART1)){
+      char c = (char)LL_LPUART_ReceiveData8(LPUART1);
+      cli_input(c);
+    }
+    cli_process();
+
+#if (RX_MODE == 1)
+
     // subghz_radio_getstatus();
     // single_rx_blocking();
     LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
     LL_mDelay(1000);
 
-  }
 #endif
 
 #if (TX_MODE == 1)
-  uint8_t i = 0;
 
-  while (1)
-  {
     subghz_write_tx_buffer(i++);
     tx_packet();
     LL_mDelay(100);
     subghz_radio_getstatus();
     LL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
     LL_mDelay(1000);
-  }
 
 #endif
+
+  }
 }
 
 int32_t putchar_(char c)
