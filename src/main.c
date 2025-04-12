@@ -39,8 +39,8 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   // subghz_config();
 
-  println_("about to execute loop!");
-  execute_command(&SB_PWR_TOG, false);
+  // println_("about to execute loop!");
+  // execute_command(&SB_PWR_TOG, false);
 
 #if (RX_MODE == 1)
   // continuous_rx();
@@ -65,8 +65,8 @@ int main(void)
 
     // subghz_radio_getstatus();
     // single_rx_blocking();
-    LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
-    LL_mDelay(1000);
+    // LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
+    // LL_mDelay(1000);
 
 #endif
 

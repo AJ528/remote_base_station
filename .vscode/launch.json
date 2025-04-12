@@ -8,7 +8,7 @@
             // what folder to run this launch configuration in
             "cwd": "${workspaceFolder}",
             // path to the executable you want to run
-            "executable": "./bin/output.elf",
+            "executable": "./bin/remote_base_station.elf",
             // "request" can be "launch" or "attach". Use "launch" to tell vscodium how to start
             // the app in debug mode before attaching to it.
             "request": "launch",
