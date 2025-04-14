@@ -6,6 +6,13 @@
 #include "stm32wlxx_ll_bus.h"
 
 
+static statusLEDColor current_color = YELLOW;
+static statusLEDColor desired_color = YELLOW;
+static statusLEDPattern current_pattern = ON;
+static statusLEDPattern desired_pattern = ON;
+
+
+
 void GPIO_init(void)
 {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -84,3 +91,15 @@ void GPIO_IR_Pins_Disable(void)
 {
   LL_GPIO_SetPinMode(IR_SIGNALS_PORT, IR_MOD_PIN | IR_CARRIER_PIN, LL_GPIO_MODE_OUTPUT);
 }
+
+// void GPIO_set_status_LED(statusLEDColor color, statusLEDPattern pattern)
+// {
+//   desired_color = color;
+//   desired_pattern = pattern;
+// }
+
+// void GPIO_handle_status_LED(void)
+// {
+  
+
+// }
