@@ -10,6 +10,6 @@ echo "START debug.sh"
 gdb-multiarch -ex "set confirm off" \
     -ex "target extended-remote /dev/ttyACM0" -ex "monitor swd_scan" \
     -ex "attach 1" -ex "load" -ex "break main" \
-    bin/output.elf
+    bin/remote_base_station.elf
 
 echo "DONE"

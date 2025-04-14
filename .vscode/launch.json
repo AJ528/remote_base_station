@@ -21,7 +21,7 @@
             // pick the GDB server type. For a custom server use "external"
             "servertype": "bmp",
             // since we are using a black magic debug probe, we need to specify the serial interface of the GDB server
-            "BMPGDBSerialPort": "/dev/ttyACM0",
+            "BMPGDBSerialPort": "/dev/ttyBmpGdb",
             // since we aren't using the standard GDB, specify the custom gdb program to use
             "gdbPath": "gdb-multiarch",
             // Cortex-Debug extension assumes a prefix of "arm-none-eabi", but it doesn't hurt to be explicit
