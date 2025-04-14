@@ -18,6 +18,9 @@
 
 
 #define SMPS_CTRL0_REG_ADDR         0x0916
+#define SUBGHZ_PCR_ADDR             0x091A
+#define SUBGHZ_REGDRVCR_ADDR        0x091F
+#define SUBGHZ_SMPSC2R_ADDR         0x0923
 
 #define RADIO_MODE_STANDBY_RC       0x02
 #define RADIO_MODE_STANDBY_HSE32    0x03
@@ -36,6 +39,9 @@ static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz);
 
 void subghz_init(void)
 {
+
+  uint8_t regVal = 0;
+
   // enable clocks
   LL_APB3_GRP1_EnableClock(LL_APB3_GRP1_PERIPH_SUBGHZSPI);
 
@@ -58,11 +64,31 @@ void subghz_init(void)
   /*  Enable the clock detection circuitry. This should automatically disable the onboard SMPS if the HSE32 signal ever fails.
       The reference manual says it's not necessary when using TCXO powered from VDDTCXO, but it probably doesn't hurt. */
   const uint8_t clk_detect = 0x40;
-  ERROR_CHECK(HAL_SUBGHZ_WriteRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, clk_detect));
+  HAL_SUBGHZ_ReadRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, &regVal);
+  regVal = regVal | clk_detect;
+  ERROR_CHECK(HAL_SUBGHZ_WriteRegister(&subghz_handle, SMPS_CTRL0_REG_ADDR, regVal));
 
   /*  Set the SUBGHZ module to use the SMPS when in active modes */
   const uint8_t regulator_mode = 0x01;  // sets active mode power supply to SMPS
   ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_REGULATORMODE, &regulator_mode, 1));
+
+  const uint8_t pcr_val = 0x60;
+  HAL_SUBGHZ_ReadRegister(&subghz_handle, SUBGHZ_PCR_ADDR, &regVal);
+  regVal &= ~(pcr_val);
+  regVal |= pcr_val;
+  HAL_SUBGHZ_WriteRegister(&subghz_handle, SUBGHZ_PCR_ADDR, regVal);
+
+  const uint8_t reg_drv_val = 0x09;
+  HAL_SUBGHZ_ReadRegister(&subghz_handle, SUBGHZ_REGDRVCR_ADDR, &regVal);
+  regVal &= ~(reg_drv_val);
+  regVal |= reg_drv_val;
+  HAL_SUBGHZ_WriteRegister(&subghz_handle, SUBGHZ_REGDRVCR_ADDR, regVal);
+
+  const uint8_t smps_drv_val = 0x06;
+  HAL_SUBGHZ_ReadRegister(&subghz_handle, SUBGHZ_SMPSC2R_ADDR, &regVal);
+  regVal &= ~(smps_drv_val);
+  regVal |= smps_drv_val;
+  HAL_SUBGHZ_WriteRegister(&subghz_handle, SUBGHZ_SMPSC2R_ADDR, regVal);
 }
 
 void subghz_config(void)

@@ -97,7 +97,7 @@ void subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz)
   ERROR_CHECK(DefaultModulationParams(hsubghz));
 
   // set the frequency of the carrier wave
-  ERROR_CHECK(subghz_setFrequency(hsubghz, RF_FREQ));
+  // ERROR_CHECK(subghz_setFrequency(hsubghz, RF_FREQ));
 }
 
 HAL_StatusTypeDef subghz_setAddress(SUBGHZ_HandleTypeDef *hsubghz, uint8_t address)
