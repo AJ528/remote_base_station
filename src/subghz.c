@@ -11,6 +11,9 @@
 #include "error.h"
 #include "mprintf.h"
 
+#include "sysclk.h"
+#include "stm32wlxx_ll_rcc.h"
+
 #include "stm32wlxx_hal_subghz.h"
 #include "stm32wlxx_ll_bus.h"
 
@@ -56,10 +59,19 @@ void subghz_init(void)
   const uint8_t standby_clock = 0x00; // sets the standby clock to 13MHz internal RC oscillator
   ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_STANDBY, &standby_clock, 1));
 
+  // TODO: verify there are no errors as the subghz module gets initialized
+  uint8_t err_buff[4]={0};
+  ERROR_CHECK(HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_ERROR, err_buff, 3));
+
   /*  Set VDDTCXO to 2.2V. When combined with the series impedance on the CCA, the TCXO will
       create a 32MHz clock signal at a safe voltage level for the MCU */
-  const uint8_t tcxo_settings[4] = {0x03, 0x00, 0x00, 0x00};		// sets VDDTCXO to output 2.2V and disables the timeout
+  // for some reason, the timeout cannot be 0x00 or there are HAL errors
+  const uint8_t tcxo_settings[4] = {0x03, 0x00, 0x00, 0x40};		// sets VDDTCXO to output 2.2V and disables the timeout
   ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TCXOMODE, tcxo_settings, 4));
+
+  // TODO: see if you need to enable calibrations before actually calibrating.
+  // uint8_t cal_enable = 0x7f;
+  // ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_CALIBRATE, &cal_enable, 1));
 
   /*  Enable the clock detection circuitry. This should automatically disable the onboard SMPS if the HSE32 signal ever fails.
       The reference manual says it's not necessary when using TCXO powered from VDDTCXO, but it probably doesn't hurt. */

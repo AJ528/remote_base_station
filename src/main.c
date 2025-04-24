@@ -19,12 +19,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+static inline void enable_cycle_count(void);
 
 extern uint32_t _vector_table_offset;
 
 int main(void)
 {
   SCB->VTOR = (uint32_t)(&_vector_table_offset);  // set the vector table offset
+  enable_cycle_count();
   /* initialize the subghz module so the voltage of VDD_TCXO can be adjusted */
   subghz_init();
   /* Configure the system clock to run off HSE32 */
@@ -37,7 +39,7 @@ int main(void)
   timer_init();
 
   /* Configure the SUBGHZ module to listen for commands */
-  // subghz_config();
+  subghz_config();
 
   // println_("about to execute loop!");
   // execute_command(&SB_PWR_TOG, false);
@@ -91,6 +93,14 @@ int32_t putchar_(char c)
   // once the LPUART_TDR register is empty, fill it with char c
   LL_LPUART_TransmitData8(LPUART1, (uint8_t)c);
   return (c);
+}
+
+static inline void enable_cycle_count(void)
+{
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->CYCCNT = 0;
+  DWT->LSUCNT = 0;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk | DWT_CTRL_LSUEVTENA_Msk;
 }
 
 #ifdef  USE_FULL_ASSERT
