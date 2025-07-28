@@ -84,6 +84,8 @@ void subghz_init(void)
   const uint8_t regulator_mode = 0x01;  // sets active mode power supply to SMPS
   ERROR_CHECK(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_REGULATORMODE, &regulator_mode, 1));
 
+  /* You cannot trust the "reset values" listed in the reference manual for the following 3 registers.
+     Therefore, do a read -> modify -> write on the registers instead of just writing a value to them. */
   const uint8_t pcr_val = 0x60;
   HAL_SUBGHZ_ReadRegister(&subghz_handle, SUBGHZ_PCR_ADDR, &regVal);
   regVal &= ~(pcr_val);
