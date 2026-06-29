@@ -4,6 +4,11 @@
 #include "stm32wlxx_ll_pwr.h"
 #include "stm32wlxx_ll_rcc.h"
 #include "stm32wlxx_ll_utils.h"
+#include "stm32wlxx_ll_cortex.h"
+
+#include <stdint.h>
+
+static uint32_t tick_count = 0;
 
 void sysclk_init(void)
 {
@@ -45,4 +50,16 @@ void sysclk_init(void)
 
   LL_RCC_GetSystemClocksFreq(&clk_struct);
   LL_Init1msTick(clk_struct.HCLK1_Frequency);
+
+  LL_SYSTICK_EnableIT();
+}
+
+uint32_t get_tick(void)
+{
+  return tick_count;
+}
+
+void SysTick_Handler(void)
+{
+  tick_count++;
 }

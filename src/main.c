@@ -12,6 +12,7 @@
 
 #include "pin_defs.h"
 #include "stm32wlxx_ll_gpio.h"
+#include "subghz_support.h"
 
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
@@ -44,12 +45,16 @@ int main(void)
   // println_("about to execute loop!");
   // execute_command(&SB_PWR_TOG, false);
 
+
+
 #if (RX_MODE == 1)
   // continuous_rx();
 #endif
 
 #if (TX_MODE == 1)
   uint8_t i = 0;
+  uint32_t ref_time = get_tick();
+  const uint32_t delay_ms_time = 1000;
 #endif
 
 // infinite loop
@@ -74,12 +79,15 @@ int main(void)
 
 #if (TX_MODE == 1)
 
-    subghz_write_tx_buffer(i++);
-    tx_packet();
-    LL_mDelay(100);
-    subghz_radio_getstatus();
-    LL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-    LL_mDelay(1000);
+    uint32_t current_time = get_tick();
+    if(current_time - ref_time >= delay_ms_time){
+      ref_time = current_time;
+      subghz_write_tx_buffer(i++);
+      tx_packet();
+      LL_mDelay(100);
+      subghz_radio_getstatus();
+      LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
+    }
 
 #endif
 

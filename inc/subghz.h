@@ -12,8 +12,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define TX_MODE  0
-#define RX_MODE  1
+#define TX_MODE  1
+#define RX_MODE  0
 
 void subghz_init(void);
 void subghz_config(void);
