@@ -8,11 +8,9 @@
 #include "IR_lib.h"
 #include "cmd_assoc_structs.h"
 
-#include "mprintf.h"
+// #include "mprintf.h"
 
-#include "pin_defs.h"
-#include "stm32wlxx_ll_gpio.h"
-#include "subghz_support.h"
+// #include "subghz_support.h"
 
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
@@ -48,7 +46,7 @@ int main(void)
 
 
 #if (RX_MODE == 1)
-  // continuous_rx();
+  continuous_rx();
 #endif
 
 #if (TX_MODE == 1)
@@ -85,8 +83,8 @@ int main(void)
       subghz_write_tx_buffer(i++);
       tx_packet();
       LL_mDelay(100);
-      subghz_radio_getstatus();
-      LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
+      // subghz_radio_getstatus();
+      toggle_status_LED();
     }
 
 #endif

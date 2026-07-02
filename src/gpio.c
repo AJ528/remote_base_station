@@ -92,6 +92,11 @@ void GPIO_IR_Pins_Disable(void)
   LL_GPIO_SetPinMode(IR_SIGNALS_PORT, IR_MOD_PIN | IR_CARRIER_PIN, LL_GPIO_MODE_OUTPUT);
 }
 
+void toggle_status_LED(void)
+{
+  LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
+}
+
 // void GPIO_set_status_LED(statusLEDColor color, statusLEDPattern pattern)
 // {
 //   desired_color = color;

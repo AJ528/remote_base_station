@@ -11,6 +11,7 @@
 #include "error.h"
 #include "mprintf.h"
 
+#include "gpio.h"
 #include "sysclk.h"
 #include "stm32wlxx_ll_rcc.h"
 
@@ -214,5 +215,58 @@ static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz)
 void SUBGHZ_Radio_IRQHandler(void)
 {
   // pass the interrupt to the HAL IRQ handler
-  HAL_SUBGHZ_IRQHandler(&subghz_handle);
+  // HAL_SUBGHZ_IRQHandler(&subghz_handle);
+
+  // moving HAL IRQ handler body here for the moment
+
+  uint8_t tmpisr[3U] = {0U};
+  uint16_t itsource;
+
+  /* Retrieve Interrupts from SUBGHZ Irq Register */
+  HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_IRQSTATUS, tmpisr, 3U);
+  itsource = tmpisr[1U];
+  itsource = (itsource << 8U) | tmpisr[2U];
+
+  /* Clear SUBGHZ Irq Register */
+  HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_CLR_IRQSTATUS, tmpisr+1, 2U);
+
+  // if there is an error, don't do anything else
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_ERROR) != RESET)
+  {
+    // if you need more info about the error source, look at the packet status
+    return;
+  }
+
+  /* Packet transmission completed Interrupt */
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_TXDONE) != RESET)
+  {
+    // do something
+  }
+
+  /* Packet received Interrupt */
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_RXDONE) != RESET)
+  {
+    // do something
+    toggle_status_LED();
+    printfln_("packet received!");
+    subghz_read_rx_buffer();
+  }
+
+  /* Preamble Detected Interrupt */
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_PREAMBLE_DETECTED) != RESET)
+  {
+    // do something
+  }
+
+  /*  Valid sync word detected Interrupt */
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_SYNCWORD_VALID) != RESET)
+  {
+    // do something
+  }
+
+  /* Rx or Tx Timeout Interrupt */
+  if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_RX_TX_TIMEOUT) != RESET)
+  {
+    // do something
+  }
 }
