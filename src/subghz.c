@@ -19,6 +19,7 @@
 #include "stm32wlxx_ll_bus.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 
 
 #define SMPS_CTRL0_REG_ADDR         0x0916
@@ -141,6 +142,36 @@ static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz
   return HAL_OK;
 }
 
+int32_t tx_cmd(uint32_t argc, char* argv[])
+{
+#if (TX_MODE == 1)
+  // radio RAM has a 256-byte data buffer. Limit max to 128 bytes for now.
+  uint8_t buf[128] = {0};
+  uint16_t buf_index = 0;
+
+  for(uint32_t i = 1; i < argc; i++){
+    uint32_t j = 0;
+    while((argv[i][j] != '\0') && (buf_index < sizeof(buf))){
+      buf[buf_index++] = argv[i][j++];
+    }
+    if(((i+1) < argc) && (buf_index+1) < sizeof(buf)){
+      buf[buf_index++] = ' ';
+    }
+  }
+
+  subghz_write_tx_buffer(buf, buf_index);
+  tx_packet();
+  toggle_status_LED();
+
+
+#endif
+#if (RX_MODE == 1)
+  printfln_("Firmware in RX mode, function not available.");
+#endif
+
+  return 0;
+}
+
 void subghz_read_rx_buffer(void)
 {
   uint8_t buf[16];
@@ -161,29 +192,16 @@ void subghz_read_rx_buffer(void)
   print_newline();
 }
 
-void subghz_write_tx_buffer(uint8_t value)
+void subghz_write_tx_buffer(uint8_t *value, uint16_t val_len)
 {
-  uint8_t tx_addr;
-  uint8_t buf[4];
-  uint8_t buf2[3];
-  uint32_t i;
+  // uint8_t tx_addr;
 
-  for(i = 0; i < sizeof(buf); i++){
-    buf[i] = value++;
-  }
-  // get the start address of the tx buffer (I think)
-  HAL_SUBGHZ_ReadRegister(&subghz_handle, 0x0802, &tx_addr);
-
-  printfln_("tx_addr = %#0x", tx_addr);
+  // get the tx buffer current location
+  // HAL_SUBGHZ_ReadRegister(&subghz_handle, 0x0802, &tx_addr);
+  // printfln_("tx_addr = %#0x", tx_addr);
   
   // write bytes to the start of the tx buffer
-  HAL_SUBGHZ_WriteBuffer(&subghz_handle, 0x80, buf, sizeof(buf));
-
-  printfln_("value = %#04x", value);
-
-  HAL_SUBGHZ_ReadBuffer(&subghz_handle, 0x81, buf2, sizeof(buf2));
-
-  printfln_("buf2 = %#04x", buf2[1]);
+  HAL_SUBGHZ_WriteBuffer(&subghz_handle, 0x80, value, val_len);
 }
 
 HAL_StatusTypeDef tx_packet(void)
@@ -192,7 +210,7 @@ HAL_StatusTypeDef tx_packet(void)
   return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_TX, RadioCmd, 3));
 }
 
-HAL_StatusTypeDef continuous_rx(void)
+HAL_StatusTypeDef continuous_rx_enable(void)
 {
   const uint8_t RadioCmd[3] = {0xFF, 0xFF, 0xFF};
   return(HAL_SUBGHZ_ExecSetCmd(&subghz_handle, RADIO_SET_RX, RadioCmd, 3));
@@ -221,6 +239,7 @@ void SUBGHZ_Radio_IRQHandler(void)
 
   uint8_t tmpisr[3U] = {0U};
   uint16_t itsource;
+  uint8_t tmp_buf[4] = {0};
 
   /* Retrieve Interrupts from SUBGHZ Irq Register */
   HAL_SUBGHZ_ExecGetCmd(&subghz_handle, RADIO_GET_IRQSTATUS, tmpisr, 3U);
@@ -234,6 +253,8 @@ void SUBGHZ_Radio_IRQHandler(void)
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_ERROR) != RESET)
   {
     // if you need more info about the error source, look at the packet status
+    printfln_("SUBGHZ Error!");
+    subghz_radio_getPacketStatus(tmp_buf, true);
     return;
   }
 
@@ -250,6 +271,7 @@ void SUBGHZ_Radio_IRQHandler(void)
     toggle_status_LED();
     printfln_("packet received!");
     subghz_read_rx_buffer();
+    subghz_radio_getPacketStatus(tmp_buf, true);
   }
 
   /* Preamble Detected Interrupt */

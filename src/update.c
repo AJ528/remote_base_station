@@ -17,9 +17,7 @@ int32_t update_cmd(uint32_t argc, char* argv[])
   (void)argc;
   (void)argv;
 
-  // // call the system bootloader function (does not return)
-  // ((void (*)(void))0x1fff0001)();
-
+  // call the system bootloader function (does not return)
   __set_MSP(BOOTVTAB->Initial_SP);
   BOOTVTAB->Reset_Handler();
 }

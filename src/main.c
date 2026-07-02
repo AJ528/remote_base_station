@@ -10,8 +10,6 @@
 
 // #include "mprintf.h"
 
-// #include "subghz_support.h"
-
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
 
@@ -40,19 +38,18 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   subghz_config();
 
-  // println_("about to execute loop!");
   // execute_command(&SB_PWR_TOG, false);
 
 
 
 #if (RX_MODE == 1)
-  continuous_rx();
+  // RX mode one-time set up
+  continuous_rx_enable();
 #endif
 
 #if (TX_MODE == 1)
-  uint8_t i = 0;
-  uint32_t ref_time = get_tick();
-  const uint32_t delay_ms_time = 1000;
+  // TX mode one-time set up
+
 #endif
 
 // infinite loop
@@ -67,25 +64,12 @@ int main(void)
     cli_process();
 
 #if (RX_MODE == 1)
-
-    // subghz_radio_getstatus();
-    // single_rx_blocking();
-    // LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
-    // LL_mDelay(1000);
+  // continuous RX commands
 
 #endif
 
 #if (TX_MODE == 1)
-
-    uint32_t current_time = get_tick();
-    if(current_time - ref_time >= delay_ms_time){
-      ref_time = current_time;
-      subghz_write_tx_buffer(i++);
-      tx_packet();
-      LL_mDelay(100);
-      // subghz_radio_getstatus();
-      toggle_status_LED();
-    }
+  // continuous TX commands
 
 #endif
 

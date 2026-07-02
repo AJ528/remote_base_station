@@ -98,6 +98,7 @@ static int32_t help_cmd(uint32_t argc, char* argv[]);
 // declare more command functions here. Functions must have the form:
 // int32_t func_name(uint32_t argc, char*argv[]);
 extern int32_t update_cmd(uint32_t argc, char* argv[]);
+extern int32_t tx_cmd(uint32_t argc, char* argv[]);
 
 
 /*** Internal Variables and Structures ***/
@@ -115,6 +116,11 @@ static const cmdEntry cmd_table[] =
     .cmd_name = "update",
     .func_pointer = update_cmd,
     .help_text = "enter bootloader mode"
+  },
+  {
+    .cmd_name = "tx",
+    .func_pointer = tx_cmd,
+    .help_text = "transmit a message"
   }
 };
 
@@ -194,6 +200,8 @@ void cli_process(void)
 
 static int32_t help_cmd(uint32_t argc, char* argv[])
 {
+  (void)argc;
+  (void)argv;
   const int32_t cmd_col_width = -20;    // negative number means text will be left-aligned
   puts_("Remote Base Station ");
   // VERSION is defined in the makefile and passed to the compiler

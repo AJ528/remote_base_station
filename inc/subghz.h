@@ -12,15 +12,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define TX_MODE  1
-#define RX_MODE  0
+#define TX_MODE  0
+#define RX_MODE  1
 
 void subghz_init(void);
 void subghz_config(void);
-void subghz_write_tx_buffer(uint8_t value);
+void subghz_write_tx_buffer(uint8_t *value, uint16_t val_len);
 HAL_StatusTypeDef tx_packet(void);
 void subghz_read_rx_buffer(void);
-HAL_StatusTypeDef continuous_rx(void);
+HAL_StatusTypeDef continuous_rx_enable(void);
 HAL_StatusTypeDef single_rx_blocking(void);
 
 #endif /* __SUBGHZ_H */

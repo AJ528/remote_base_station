@@ -78,10 +78,10 @@ void subghz_init_settings_default(SUBGHZ_HandleTypeDef *hsubghz)
 
   uint8_t payload_len;
 #if (RX_MODE == 1)
-  payload_len = 18;
+  payload_len = 4;
 #endif
 #if (TX_MODE == 1)
-  payload_len = 3;
+  payload_len = 4;
 #endif
   // set the payload length
   // when receiving variable-length packets, the length set here is the max allowed before error
