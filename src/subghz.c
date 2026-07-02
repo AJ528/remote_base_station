@@ -271,7 +271,9 @@ void SUBGHZ_Radio_IRQHandler(void)
     toggle_status_LED();
     printfln_("packet received!");
     subghz_read_rx_buffer();
-    subghz_radio_getPacketStatus(tmp_buf, true);
+    subghz_radio_getPacketStatus(tmp_buf, false);
+    int32_t rssi_avg = (tmp_buf[3] / 2) * -1;
+    printfln_("rssi avg = %d dBm", rssi_avg);
   }
 
   /* Preamble Detected Interrupt */

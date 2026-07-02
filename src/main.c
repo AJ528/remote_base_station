@@ -49,7 +49,9 @@ int main(void)
 
 #if (TX_MODE == 1)
   // TX mode one-time set up
-
+  uint8_t i = 0;
+  uint32_t ref_time = get_tick();
+  const uint32_t delay_ms_time = 1000;
 #endif
 
 // infinite loop
@@ -70,7 +72,15 @@ int main(void)
 
 #if (TX_MODE == 1)
   // continuous TX commands
+    uint32_t current_time = get_tick();
 
+    if(current_time - ref_time >= delay_ms_time){
+      ref_time = current_time;
+      subghz_write_tx_buffer(&i, 1);
+      i++;
+      tx_packet();
+      toggle_status_LED();
+    }
 #endif
 
   }
