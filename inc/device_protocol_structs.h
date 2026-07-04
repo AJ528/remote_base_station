@@ -40,7 +40,9 @@ struct device{
 
 extern const struct device toshiba_tv;
 extern const struct device soundbar;
+extern const struct device LH_samsung_tv;
 extern const struct protocol NEC1;
+extern const struct protocol NECx2;
 
 
 

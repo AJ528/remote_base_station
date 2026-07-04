@@ -37,3 +37,11 @@ const struct command SB_MUTE =
  .function_len = 8,
  .device = &soundbar
 };
+
+//function = 0x07
+const struct command LHTV_VLUP =
+{
+ .function = 0x07,
+ .function_len = 8,
+ .device = &LH_samsung_tv
+};

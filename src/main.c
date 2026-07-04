@@ -38,7 +38,7 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   subghz_config();
 
-  // execute_command(&SB_PWR_TOG, false);
+  execute_command(&LHTV_VLUP, false);
 
 
 

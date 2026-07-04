@@ -34,20 +34,7 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
 {
   const struct protocol *protocol_used = cmd->device->prot_used;
 
-  
-  //TODO: set the correct carrier-wave frequency
-/*
-    //set up carrier freq and SPI timing
-
-    const uint32_t SMCLK_freq = CS_getSMCLK();
-
-    stop_carrier_wave();
-    enable_carrier_wave(SMCLK_freq, protocol_used->carrier_freq);
-
-    disable_SPI();
-    set_unit_freq(SMCLK_freq, protocol_used->unit_freq);
-*/
-
+  set_IR_frequency(protocol_used->carrier_freq);
 
   int32_t result = protocol_used->fmt_func(cmd, is_ditto);
   CHECK(result);
@@ -121,6 +108,54 @@ int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
   return (0);
 }
 
+int32_t format_NECx2_command(const struct command *cmd, bool is_ditto)
+{
+  int32_t result;
+  uint32_t time_sum = 0;
+  const struct protocol *const cur_protocol = &NECx2;
+  struct stream_char *cur_char;
+  // NECx2 doesn't have special ditto stream, so we always use primary stream
+  cur_char = &(cur_protocol->primary_stream);
+  // encode lead-in
+  result = convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
+  CHECK(result);
+  time_sum += result;
+  if(is_ditto == false){
+    // encode device ID
+    result = encode_number(cur_protocol, cmd->device->device_id, cmd->device->device_len);
+    CHECK(result);
+    time_sum += result;
+    // encode subdevice ID
+    result = encode_number(cur_protocol, cmd->device->subdevice_id, cmd->device->subdevice_len);
+    CHECK(result);
+    time_sum += result;
+    // encode function
+    result = encode_number(cur_protocol, cmd->function, cmd->function_len);
+    CHECK(result);
+    time_sum += result;
+    // encode the inverse function
+    result = encode_number(cur_protocol, ~(cmd->function), cmd->function_len);
+    CHECK(result);
+    time_sum += result;
+  }
+  // encode lead-out
+  result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
+  CHECK(result);
+  time_sum += result;
+
+  if(cur_char->extent_ms != 0){
+    int32_t extent_us = (cur_char->extent_ms) * 1000;
+    int32_t extent_remainder = extent_us - time_sum;
+    if(extent_remainder < 0){
+      //something has gone wrong
+      return (-1);
+    }
+    result = add_extent_delay(extent_remainder);
+    CHECK(result);
+  }
+  return (0);
+}
+
 /*
     this function takes a number and encodes it per the protocol provided
     returns negative number on error, otherwise returns the length of time encoded
@@ -130,6 +165,7 @@ static int32_t encode_number(const struct protocol *protocol, uint32_t number, u
   uint32_t input_num;
   int32_t result;
   int32_t time_sum = 0;
+  // if least-significant bit is transmitted first
   if(protocol->LSB == false){
     //reverse the bit order of the number
     input_num = rev_bit(number, bitlen);

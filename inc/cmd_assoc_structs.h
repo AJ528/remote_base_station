@@ -32,4 +32,6 @@ extern const struct command SB_VLUP;
 extern const struct command SB_VLDN;
 extern const struct command SB_MUTE;
 
+extern const struct command LHTV_VLUP;
+
 #endif /* __CMD_ASSOC_STRUCTS_H */
