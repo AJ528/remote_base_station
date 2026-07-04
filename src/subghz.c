@@ -226,6 +226,7 @@ static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz)
 {
   subghz_setIRQ(hsubghz, SUBGHZ_IRQ_RXDONE | SUBGHZ_IRQ_ERROR);
   /* SUBGHZ_Radio_IRQn interrupt configuration */
+  // set interrupt priority to 3. Lower numbers have higher priority
   NVIC_SetPriority(SUBGHZ_Radio_IRQn, 3);
   NVIC_EnableIRQ(SUBGHZ_Radio_IRQn);
 }
