@@ -40,7 +40,7 @@ int main(void)
 
 
 #if (RX_MODE == 1)
-  execute_command(&LHTV_VLUP, false);
+  execute_command(&LHTV_PWR, false);
   // RX mode one-time set up
   continuous_rx_enable();
 #endif

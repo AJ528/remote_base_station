@@ -45,3 +45,11 @@ const struct command LHTV_VLUP =
  .function_len = 8,
  .device = &LH_samsung_tv
 };
+
+//function = 0xe6
+const struct command LHTV_PWR =
+{
+ .function = 0xe6,
+ .function_len = 8,
+ .device = &LH_samsung_tv
+};

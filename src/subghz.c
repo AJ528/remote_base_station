@@ -11,6 +11,7 @@
 #include "IR_lib.h"
 #include "error.h"
 #include "mprintf.h"
+#include "utils.h"
 
 #include "gpio.h"
 #include "sysclk.h"
@@ -40,6 +41,7 @@
 SUBGHZ_HandleTypeDef subghz_handle;
 
 static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz);
+static uint32_t str_to_uint32(const char * restrict nptr, const char ** restrict endptr, uint32_t base);
 static void subghz_init_irq(SUBGHZ_HandleTypeDef *hsubghz);
 
 
@@ -145,24 +147,27 @@ static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz
 
 int32_t tx_cmd(uint32_t argc, char* argv[])
 {
-  // TODO: create strtol function for general use
 #if (TX_MODE == 1)
   // radio RAM has a 256-byte data buffer. Limit max to 128 bytes for now.
-  uint8_t buf[128] = {0};
+  uint8_t buf[4] = {0};
   uint16_t buf_index = 0;
+  char const * endptr = NULL;
+  uint32_t i;
 
-  for(uint32_t i = 1; i < argc; i++){
-    uint32_t j = 0;
-    while((argv[i][j] != '\0') && (buf_index < sizeof(buf))){
-      buf[buf_index++] = argv[i][j++];
-    }
-    if(((i+1) < argc) && (buf_index+1) < sizeof(buf)){
-      buf[buf_index++] = ' ';
+  for(i = 1; i < argc; i++){
+    if(buf_index < sizeof(buf)){
+      buf[buf_index++] = (uint8_t)str_to_uint32(argv[i], &endptr, 0);
     }
   }
 
-  // subghz_write_tx_buffer(buf, buf_index);
-  subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
+  puts_("tx_buf = ");
+  for(i = 0; i < buf_index; i++){
+    printf_("%#04x, ", buf[i]);
+  }
+  print_newline();
+
+  subghz_write_tx_buffer(buf, buf_index);
+  // subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
   tx_packet();
   toggle_status_LED();
 
@@ -173,6 +178,99 @@ int32_t tx_cmd(uint32_t argc, char* argv[])
 #endif
 
   return 0;
+}
+
+static uint32_t str_to_uint32(const char * restrict nptr, const char ** restrict endptr, uint32_t base)
+{
+  bool is_valid = false;
+  bool is_negative = false;
+  char const *c_Ptr;
+  uint32_t digit;
+  uint32_t result = 0;
+
+  //basic error checking
+  if((nptr == NULL) || (base == 1) || (base > 36)){
+    return UINT32_MAX;
+  }
+
+  c_Ptr = nptr;
+  // if c_Ptr is pointing at whitespace, go forward until it's not
+  while((*c_Ptr == ' ') || (*c_Ptr == '\t')){
+    c_Ptr++;
+  }
+
+  // check for leading '+' or '-'
+  if(*c_Ptr == '-'){
+    is_negative = true;
+    c_Ptr++;
+  }else if(*c_Ptr == '+'){
+    c_Ptr++;
+  }
+
+  //see if the value starts with "0x" (indicating base-16)
+  if(((base == 0) || (base == 16)) && 
+  (*c_Ptr == '0') && 
+  ((c_Ptr[1] == 'x') || (c_Ptr[1] == 'X'))){
+    c_Ptr += 2;   // jump past "0x"
+    base = 16;
+  } // if not, check for "0b" (indicating base-2)
+  else if(((base == 0) || (base == 2)) && 
+  (*c_Ptr == '0') && 
+  ((c_Ptr[1] == 'b') || (c_Ptr[1] == 'B'))){
+    c_Ptr += 2;   // jump past "0b"
+    base = 2;
+  }
+
+  // if base is 0 and we haven't found any special prefixes, assume base-10
+  if(base == 0){
+    base = 10;
+  }
+
+  // infinite loop (until we "break" out of it)
+  while(true){
+    // examine current character to see if it's a potential digit
+    if((*c_Ptr >= '0') && (*c_Ptr <= '9')){
+      digit = *c_Ptr - '0';
+      c_Ptr++;
+    }else if((*c_Ptr >= 'a') && (*c_Ptr <= 'z')){
+      digit = *c_Ptr - 'a' + 10;
+      c_Ptr++;
+    }else if((*c_Ptr >= 'A') && (*c_Ptr <= 'Z')){
+      digit = *c_Ptr - 'A' + 10;
+      c_Ptr++;
+    }else{
+      // if not a potential digit, stop converting
+      break;
+    }
+    // see if the potential digit is allowed in the base being converted
+    if(digit >= base){
+      // digit is not allowed
+      // move pointer back one and exit loop
+      c_Ptr--;
+      break;
+    }
+    // if we reach this point the digit is valid, so add it to the result
+    // first multiply the working result by the base
+    result *= base;
+    result += digit;
+    
+    // if we reach this point at least once the result is now valid
+    is_valid = true;
+  }
+
+  if(endptr != NULL){
+    if(is_valid){ // if the result is valid, endptr is set to first invalid character
+      *endptr = c_Ptr;
+    }else{ // otherwise endptr = nptr
+      *endptr = nptr;
+    }
+  }
+
+  if(is_negative){
+    return (0 - result);
+  }else{
+    return result;
+  }
 }
 
 // this function requires dest_buffer to be larger than the data being copied over
@@ -189,7 +287,7 @@ int32_t subghz_read_rx_buffer(uint8_t *dest_buffer)
   HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], dest_buffer, (uint16_t)payload_len);
 
   uint32_t i;
-  puts_("dest_buf = ");
+  puts_("rx payload = ");
   for(i = 0; i < payload_len; i++){
     printf_("%#04x, ", dest_buffer[i]);
   }

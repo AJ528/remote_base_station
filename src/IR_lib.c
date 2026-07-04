@@ -1,4 +1,5 @@
 #include "IR_lib.h"
+#include "mprintf.h"
 #include "timer.h"
 #include "asm_funcs.h"
 #include "device_protocol_structs.h"
@@ -116,6 +117,8 @@ void handle_RF_command_buffer(void)
     uint8_t subdevice_id = bufPop(&RF_cmd_Buffer);
     uint8_t function_code = bufPop(&RF_cmd_Buffer);
 
+    printfln_("executing IR command: %#04x, %#04x, %#04x, %#04x", protocol_id,
+                                                    device_id, subdevice_id, function_code);
     execute_command_RF(protocol_id, device_id, subdevice_id, function_code);
   }
 
