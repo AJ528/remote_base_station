@@ -18,6 +18,7 @@ struct stream_char{
 };
 
 typedef int32_t format_func(const struct command *, bool);
+typedef int32_t format_func_RF(uint8_t, uint8_t, uint8_t, bool);
 
 struct protocol{
     uint16_t carrier_freq;
@@ -28,6 +29,7 @@ struct protocol{
     struct stream_char primary_stream;
     struct stream_char ditto_stream;
     format_func *fmt_func;
+    format_func_RF *fmt_func_RF;
 };
 
 struct device{

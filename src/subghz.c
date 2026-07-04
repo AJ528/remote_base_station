@@ -8,6 +8,7 @@
 #include "subghz.h"
 #include "stm32wlxx.h"
 #include "subghz_support.h"
+#include "IR_lib.h"
 #include "error.h"
 #include "mprintf.h"
 
@@ -144,6 +145,7 @@ static HAL_StatusTypeDef subghz_configure_settings(SUBGHZ_HandleTypeDef *hsubghz
 
 int32_t tx_cmd(uint32_t argc, char* argv[])
 {
+  // TODO: create strtol function for general use
 #if (TX_MODE == 1)
   // radio RAM has a 256-byte data buffer. Limit max to 128 bytes for now.
   uint8_t buf[128] = {0};
@@ -159,7 +161,8 @@ int32_t tx_cmd(uint32_t argc, char* argv[])
     }
   }
 
-  subghz_write_tx_buffer(buf, buf_index);
+  // subghz_write_tx_buffer(buf, buf_index);
+  subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
   tx_packet();
   toggle_status_LED();
 
@@ -172,7 +175,8 @@ int32_t tx_cmd(uint32_t argc, char* argv[])
   return 0;
 }
 
-void subghz_read_rx_buffer(void)
+// this function requires dest_buffer to be larger than the data being copied over
+int32_t subghz_read_rx_buffer(uint8_t *dest_buffer)
 {
   uint8_t buf[16];
 
@@ -182,14 +186,16 @@ void subghz_read_rx_buffer(void)
     printfln_("Buf Status: %#04x, %#04x, %#04x", buf[0], buf[1], buf[2]);
   
   // read bytes from rx buffer
-  HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], buf, (uint16_t)payload_len);
+  HAL_SUBGHZ_ReadBuffer(&subghz_handle, buf[2], dest_buffer, (uint16_t)payload_len);
 
   uint32_t i;
-  puts_("buf = ");
+  puts_("dest_buf = ");
   for(i = 0; i < payload_len; i++){
-    printf_("%#04x, ", buf[i]);
+    printf_("%#04x, ", dest_buffer[i]);
   }
   print_newline();
+
+  return payload_len;
 }
 
 void subghz_write_tx_buffer(uint8_t *value, uint16_t val_len)
@@ -268,13 +274,18 @@ void SUBGHZ_Radio_IRQHandler(void)
   /* Packet received Interrupt */
   if (SUBGHZ_CHECK_IT_SOURCE(itsource, SUBGHZ_IRQ_RXDONE) != RESET)
   {
+    uint8_t rx_buf[16];
+    uint32_t data_len;
     // do something
     toggle_status_LED();
     printfln_("packet received!");
-    subghz_read_rx_buffer();
+    data_len = subghz_read_rx_buffer(rx_buf);
     subghz_radio_getPacketStatus(tmp_buf, false);
     int32_t rssi_avg = (tmp_buf[3] / 2) * -1;
     printfln_("rssi avg = %d dBm", rssi_avg);
+    if(data_len == 5){
+      receive_RF_command(&rx_buf[1], 4);
+    }
   }
 
   /* Preamble Detected Interrupt */

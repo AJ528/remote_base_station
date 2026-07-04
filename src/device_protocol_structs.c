@@ -77,6 +77,7 @@ const struct protocol NECx2 =
   .lead_out = {564},
   .lead_out_len = 1
  },
- .fmt_func = format_NECx2_command
+ .fmt_func = format_NECx2_command,
+ .fmt_func_RF = format_NECx2_command_RF
 };
 

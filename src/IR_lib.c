@@ -4,6 +4,7 @@
 #include "device_protocol_structs.h"
 #include "utils.h"
 #include "gpio.h"
+#include "ring_buffer.h"
 
 #include "stm32wlxx_ll_utils.h"
 
@@ -13,12 +14,25 @@
 // This is the maximum number of entries the output buffer can hold
 // Each entry is 6 bytes
 #define   MAX_ENTRIES   32
+// size of command ring buffer (in bytes)
+#define   RF_CMD_RING_BUF_SIZE   32
+
+// ring buffer to hold received characters until they are processed
+static ringBuf RF_cmd_Buffer = {
+  .data = (uint8_t[RF_CMD_RING_BUF_SIZE]){},
+  .size = RF_CMD_RING_BUF_SIZE,
+  .writeIndex = 0,
+  .readIndex = 0,
+  .overflow = false
+};
 
 // Output buffer to hold the timer period, duty cycle, and repetition information.
 // Once completed, the output buffer is sent to the timer module to correctly blink the IR LED.
 static uint16_t output_buffer[MAX_ENTRIES * 3] = {0};
 static const uint32_t output_buffer_size = COUNT_OF(output_buffer);
 static uint32_t output_buffer_index = 0;
+
+static const struct protocol *protocol_list[] = {0, &NEC1, &NECx2};
 
 // Private Function Declarations
 static int32_t encode_number(const struct protocol *protocol, uint32_t number, uint32_t bitlen);
@@ -54,6 +68,57 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
   GPIO_IR_Pins_Disable();
 
   return (0);
+}
+
+int32_t execute_command_RF(uint8_t protocol_id, uint8_t device_id, uint8_t subdevice_id, uint8_t function_code)
+{
+  const struct protocol *protocol_used = protocol_list[protocol_id];
+
+  set_IR_frequency(protocol_used->carrier_freq);
+
+  int32_t result = protocol_used->fmt_func_RF(device_id, subdevice_id, function_code, false);
+  CHECK(result);
+
+  // enable the IR LED before use
+  GPIO_IR_Pins_Enable();
+
+  send_pulses(output_buffer, output_buffer_index);
+  while(DMA_busy()){
+    // enter LPM here?
+    LL_mDelay(50);
+  }
+
+  output_buffer_reset();
+
+  // disable the IR LEDs when not in use
+  GPIO_IR_Pins_Disable();
+
+  return (0);
+}
+
+void receive_RF_command(uint8_t *RF_cmd, uint32_t RF_cmd_len)
+{
+  uint32_t i;
+  int32_t result;
+  for(i = 0; i < RF_cmd_len; i++){
+    result = bufPush(&RF_cmd_Buffer, RF_cmd[i]);
+    if(result < 0){
+      RF_cmd_Buffer.overflow = true;
+    }
+  }
+}
+
+void handle_RF_command_buffer(void)
+{
+  if(!bufIsEmpty(&RF_cmd_Buffer)){
+    uint8_t protocol_id = bufPop(&RF_cmd_Buffer);
+    uint8_t device_id = bufPop(&RF_cmd_Buffer);
+    uint8_t subdevice_id = bufPop(&RF_cmd_Buffer);
+    uint8_t function_code = bufPop(&RF_cmd_Buffer);
+
+    execute_command_RF(protocol_id, device_id, subdevice_id, function_code);
+  }
+
 }
 
 int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
@@ -120,24 +185,68 @@ int32_t format_NECx2_command(const struct command *cmd, bool is_ditto)
   result = convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
   CHECK(result);
   time_sum += result;
-  if(is_ditto == false){
-    // encode device ID
-    result = encode_number(cur_protocol, cmd->device->device_id, cmd->device->device_len);
+  // encode device ID
+  result = encode_number(cur_protocol, cmd->device->device_id, cmd->device->device_len);
+  CHECK(result);
+  time_sum += result;
+  // encode subdevice ID
+  result = encode_number(cur_protocol, cmd->device->subdevice_id, cmd->device->subdevice_len);
+  CHECK(result);
+  time_sum += result;
+  // encode function
+  result = encode_number(cur_protocol, cmd->function, cmd->function_len);
+  CHECK(result);
+  time_sum += result;
+  // encode the inverse function
+  result = encode_number(cur_protocol, ~(cmd->function), cmd->function_len);
+  CHECK(result);
+  time_sum += result;
+  // encode lead-out
+  result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
+  CHECK(result);
+  time_sum += result;
+
+  if(cur_char->extent_ms != 0){
+    int32_t extent_us = (cur_char->extent_ms) * 1000;
+    int32_t extent_remainder = extent_us - time_sum;
+    if(extent_remainder < 0){
+      //something has gone wrong
+      return (-1);
+    }
+    result = add_extent_delay(extent_remainder);
     CHECK(result);
-    time_sum += result;
-    // encode subdevice ID
-    result = encode_number(cur_protocol, cmd->device->subdevice_id, cmd->device->subdevice_len);
-    CHECK(result);
-    time_sum += result;
-    // encode function
-    result = encode_number(cur_protocol, cmd->function, cmd->function_len);
-    CHECK(result);
-    time_sum += result;
-    // encode the inverse function
-    result = encode_number(cur_protocol, ~(cmd->function), cmd->function_len);
-    CHECK(result);
-    time_sum += result;
   }
+  return (0);
+}
+
+int32_t format_NECx2_command_RF(uint8_t device_id, uint8_t subdevice_id, uint8_t function_code, bool is_ditto)
+{
+  int32_t result;
+  uint32_t time_sum = 0;
+  const struct protocol *const cur_protocol = &NECx2;
+  struct stream_char *cur_char;
+  // NECx2 doesn't have special ditto stream, so we always use primary stream
+  cur_char = &(cur_protocol->primary_stream);
+  // encode lead-in
+  result = convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
+  CHECK(result);
+  time_sum += result;
+  // encode device ID
+  result = encode_number(cur_protocol, device_id, 8);
+  CHECK(result);
+  time_sum += result;
+  // encode subdevice ID
+  result = encode_number(cur_protocol, subdevice_id, 8);
+  CHECK(result);
+  time_sum += result;
+  // encode function
+  result = encode_number(cur_protocol, function_code, 8);
+  CHECK(result);
+  time_sum += result;
+  // encode the inverse function
+  result = encode_number(cur_protocol, ~(function_code), 8);
+  CHECK(result);
+  time_sum += result;
   // encode lead-out
   result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
   CHECK(result);

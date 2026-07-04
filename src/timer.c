@@ -115,6 +115,7 @@ void dma_init(void)
 
 void send_pulses(uint16_t *pulse_array, uint32_t array_size)
 {
+  static bool first_time = true;
   // point DMA channel 1 to the location of the pulse array data
   LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_1, (uint32_t)pulse_array);
   // tell DMA channel 1 how long the data is
@@ -122,16 +123,21 @@ void send_pulses(uint16_t *pulse_array, uint32_t array_size)
 
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
 
-  // update interrupt flag may be set. clear it so it can be regenerated
+  // update interrupt flag may be set; clear it 
   LL_TIM_ClearFlag_UPDATE(TIM16);
   // generate an update event. The DMA moves data to the preload registers
   LL_TIM_GenerateEvent_UPDATE(TIM16);
-  // wait until the update interrupt flag is set before generating another interrupt event
-  // don't read TIM_EGR_UG here to determine when to trigger the next event
-  // that does not indicate when you can trigger another event
-  while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
-  // generate an update event. The preload registers move first data to the actual registers
-  LL_TIM_GenerateEvent_UPDATE(TIM16);
+  // for some unknown reason, only the first time pulses are sent 2 events must be generated
+  // TODO: figure out why this is happening
+  if(first_time){
+    // wait until the update interrupt flag is set before generating another interrupt event
+    // don't read TIM_EGR_UG here to determine when to trigger the next event
+    // that does not indicate when you can trigger another event
+    while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
+    // generate an update event. The preload registers move first data to the actual registers
+    LL_TIM_GenerateEvent_UPDATE(TIM16);
+    first_time = false;
+  }
   // enable TIM16 and TIM17 so they start counting
   LL_TIM_EnableCounter(TIM16);
   LL_TIM_EnableCounter(TIM17);

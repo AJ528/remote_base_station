@@ -19,7 +19,7 @@ void subghz_init(void);
 void subghz_config(void);
 void subghz_write_tx_buffer(uint8_t *value, uint16_t val_len);
 HAL_StatusTypeDef tx_packet(void);
-void subghz_read_rx_buffer(void);
+int32_t subghz_read_rx_buffer(uint8_t *dest_buffer);
 HAL_StatusTypeDef continuous_rx_enable(void);
 HAL_StatusTypeDef single_rx_blocking(void);
 

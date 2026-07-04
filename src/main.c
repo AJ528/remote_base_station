@@ -38,20 +38,22 @@ int main(void)
   /* Configure the SUBGHZ module to listen for commands */
   subghz_config();
 
-  execute_command(&LHTV_VLUP, false);
-
-
 
 #if (RX_MODE == 1)
+  execute_command(&LHTV_VLUP, false);
   // RX mode one-time set up
   continuous_rx_enable();
 #endif
 
 #if (TX_MODE == 1)
   // TX mode one-time set up
-  uint8_t i = 0;
-  uint32_t ref_time = get_tick();
-  const uint32_t delay_ms_time = 1000;
+  // uint8_t i = 0;
+  // uint32_t ref_time = get_tick();
+  // const uint32_t delay_ms_time = 1000;
+
+  subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
+  tx_packet();
+  toggle_status_LED();
 #endif
 
 // infinite loop
@@ -67,20 +69,20 @@ int main(void)
 
 #if (RX_MODE == 1)
   // continuous RX commands
-
+    handle_RF_command_buffer();
 #endif
 
 #if (TX_MODE == 1)
   // continuous TX commands
-    uint32_t current_time = get_tick();
+    // uint32_t current_time = get_tick();
 
-    if(current_time - ref_time >= delay_ms_time){
-      ref_time = current_time;
-      subghz_write_tx_buffer(&i, 1);
-      i++;
-      tx_packet();
-      toggle_status_LED();
-    }
+    // if(current_time - ref_time >= delay_ms_time){
+    //   ref_time = current_time;
+    //   subghz_write_tx_buffer(&i, 1);
+    //   i++;
+    //   tx_packet();
+    //   toggle_status_LED();
+    // }
 #endif
 
   }
