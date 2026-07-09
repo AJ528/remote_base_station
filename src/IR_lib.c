@@ -5,7 +5,6 @@
 #include "device_protocol_structs.h"
 #include "utils.h"
 #include "gpio.h"
-#include "ring_buffer.h"
 
 #include "stm32wlxx_ll_utils.h"
 
@@ -60,7 +59,7 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
   send_pulses(output_buffer, output_buffer_index);
   while(DMA_busy()){
     // enter LPM here?
-    LL_mDelay(50);
+    LL_mDelay(5);
   }
 
   output_buffer_reset();
@@ -120,6 +119,8 @@ void handle_RF_command_buffer(void)
     printfln_("executing IR command: %#04x, %#04x, %#04x, %#04x", protocol_id,
                                                     device_id, subdevice_id, function_code);
     execute_command_RF(protocol_id, device_id, subdevice_id, function_code);
+  }else{
+    GPIO_set_status_LED(GREEN);
   }
 
 }
