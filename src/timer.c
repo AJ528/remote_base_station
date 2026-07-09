@@ -28,20 +28,21 @@ void timer_init(void)
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM16);
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM17);
 
-  //set TIM17 to 39,024 Hz
-  //TODO: verify the frequency is not 38,976 Hz
+  // set TIM17 to 39,024 Hz
   LL_TIM_StructInit(&TIM_InitStruct);
   TIM_InitStruct.Prescaler = 0;
   // autoreload value isn't known at init time. Will be defined later
-  TIM_InitStruct.Autoreload = 0;
+  TIM_InitStruct.Autoreload = 0xffff;
   LL_TIM_Init(TIM17, &TIM_InitStruct);
   LL_TIM_EnableARRPreload(TIM17);
 
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
-  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
+  // Output mode is forced inactive currently. Will enable immediately before use
+  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_INACTIVE;
+  // TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
   // comparevalue isn't known at this time. Will be defined later so duty cycle is 50%
-  TIM_OC_InitStruct.CompareValue = 0;
+  TIM_OC_InitStruct.CompareValue = 0xffff;
   LL_TIM_OC_Init(TIM17, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
@@ -51,15 +52,17 @@ void timer_init(void)
   // Therefore TIM16 takes precisely 1us to count each number
   TIM_InitStruct.Prescaler = 0x0020;   
   // autoreload value isn't known at init time. Will be defined later
-  TIM_InitStruct.Autoreload = 0;
+  TIM_InitStruct.Autoreload = 0xffff;
   LL_TIM_Init(TIM16, &TIM_InitStruct);
   LL_TIM_EnableARRPreload(TIM16);
 
   LL_TIM_OC_StructInit(&TIM_OC_InitStruct);
-  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
+  // Output mode is forced inactive currently. Will enable immediately before use
+  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_INACTIVE;
+  // TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_ENABLE;
   // comparevalue value isn't known at init time. Will be defined later
-  TIM_OC_InitStruct.CompareValue = 0;
+  TIM_OC_InitStruct.CompareValue = 0xffff;
   LL_TIM_OC_Init(TIM16, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
   LL_TIM_OC_EnablePreload(TIM16, LL_TIM_CHANNEL_CH1);
   LL_TIM_OC_DisableFast(TIM16, LL_TIM_CHANNEL_CH1);  
@@ -73,6 +76,13 @@ void timer_init(void)
   // set interrupt priority to 3. Lower numbers have higher priority
   NVIC_SetPriority(TIM16_IRQn, 3);
   // note TIM16 IRQ is not enabled at this point
+
+    /*
+    There is a bug where if TIM17.MOE is set before TIM16.MOE,
+    IRTIM will output high until TIM17 counts to TIM17.CCR1 
+  */
+  LL_TIM_EnableAllOutputs(TIM16);
+  LL_TIM_EnableAllOutputs(TIM17);
 }
 
 void dma_init(void)
@@ -115,39 +125,36 @@ void dma_init(void)
 
 void send_pulses(uint16_t *pulse_array, uint32_t array_size)
 {
-  static bool first_time = true;
   // point DMA channel 1 to the location of the pulse array data
   LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_1, (uint32_t)pulse_array);
   // tell DMA channel 1 how long the data is
   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, array_size);
 
-  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
-
   // update interrupt flag may be set; clear it 
   LL_TIM_ClearFlag_UPDATE(TIM16);
+
+  // clear any pending DMA requests before enabling DMA channel
+  LL_TIM_DisableDMAReq_UPDATE(TIM16);
+  while(LL_TIM_IsEnabledDMAReq_UPDATE(TIM16));
+  LL_TIM_EnableDMAReq_UPDATE(TIM16);
+
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);
+
+
   // generate an update event. The DMA moves data to the preload registers
   LL_TIM_GenerateEvent_UPDATE(TIM16);
-  // for some unknown reason, only the first time pulses are sent 2 events must be generated
+
+  // for some reason I don't understand, only 1 update event is needed to load the registers properly
+  // since pre-load is enabled, my understanding is 2 update events were needed
   // TODO: figure out why this is happening
-  if(first_time){
-    // wait until the update interrupt flag is set before generating another interrupt event
-    // don't read TIM_EGR_UG here to determine when to trigger the next event
-    // that does not indicate when you can trigger another event
-    while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
-    // generate an update event. The preload registers move first data to the actual registers
-    LL_TIM_GenerateEvent_UPDATE(TIM16);
-    first_time = false;
-  }
+
+  // set the outputs active
+  LL_TIM_OC_SetMode(TIM16, LL_TIM_CHANNEL_CH1, LL_TIM_OCMODE_PWM1);
+  LL_TIM_OC_SetMode(TIM17, LL_TIM_CHANNEL_CH1, LL_TIM_OCMODE_PWM1);
+
   // enable TIM16 and TIM17 so they start counting
   LL_TIM_EnableCounter(TIM16);
   LL_TIM_EnableCounter(TIM17);
-
-  /*
-    There is a bug where if TIM17.MOE is set before TIM16.MOE,
-    IRTIM will output high until TIM17 counts to TIM17.CCR1 
-  */
-  LL_TIM_EnableAllOutputs(TIM16);
-  LL_TIM_EnableAllOutputs(TIM17);
 
   busy_sending_pulses = true;
 }
@@ -226,9 +233,12 @@ void TIM16_IRQHandler(void)
     LL_TIM_ClearFlag_UPDATE(TIM16);
     // stop TIM17 from counting (TIM16 should already be stopped due to OPM)
     LL_TIM_DisableCounter(TIM17);
+    // force the outputs low
+    LL_TIM_OC_SetMode(TIM16, LL_TIM_CHANNEL_CH1, LL_TIM_OCMODE_INACTIVE);
+    LL_TIM_OC_SetMode(TIM17, LL_TIM_CHANNEL_CH1, LL_TIM_OCMODE_INACTIVE);
     // disable TIM16 and TIM17 outputs
-    LL_TIM_DisableAllOutputs(TIM17);
-    LL_TIM_DisableAllOutputs(TIM16);
+    // LL_TIM_DisableAllOutputs(TIM17);
+    // LL_TIM_DisableAllOutputs(TIM16);
     busy_sending_pulses = false;
   }
 }
