@@ -41,6 +41,7 @@ int main(void)
 
 #if (RX_MODE == 1)
   execute_command(&LHTV_PWR, false);
+  execute_command(&LHTV_PWR, false);
   // RX mode one-time set up
   continuous_rx_enable();
 #endif
@@ -53,8 +54,10 @@ int main(void)
 
   subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
   tx_packet();
-  toggle_status_LED();
+  // toggle_status_LED();
 #endif
+
+GPIO_set_status_LED(GREEN);
 
 // infinite loop
   while(1){

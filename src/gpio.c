@@ -6,10 +6,10 @@
 #include "stm32wlxx_ll_bus.h"
 
 
-static statusLEDColor current_color = YELLOW;
-static statusLEDColor desired_color = YELLOW;
-static statusLEDPattern current_pattern = ON;
-static statusLEDPattern desired_pattern = ON;
+// static statusLEDColor current_color = YELLOW;
+// static statusLEDColor desired_color = YELLOW;
+// static statusLEDPattern current_pattern = ON;
+// static statusLEDPattern desired_pattern = ON;
 
 
 
@@ -31,9 +31,8 @@ void GPIO_init(void)
   LL_GPIO_Init(RF_SWITCH_PORT, &GPIO_InitStruct);
 
   /*Configure GPIO pin Output Level */
-  LL_GPIO_ResetOutputPin(STATUS_LED_PORT, STATUS_LED_PIN);
-  LL_GPIO_ResetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL1_PIN);
-  LL_GPIO_SetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL0_PIN);
+  LL_GPIO_ResetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL1_PIN | STATUS_LED_CTRL0_PIN);
+  LL_GPIO_SetOutputPin(STATUS_LED_PORT, STATUS_LED_PIN);
 
   /*Configure Status LED GPIO Pin */
   GPIO_InitStruct.Pin = STATUS_LED_PIN;
@@ -82,6 +81,7 @@ void GPIO_init(void)
 
 }
 
+//TODO: consider enabling/disabling IR Pins by forcing the output instead of changing mode to/from GPIO/Alternate
 void GPIO_IR_Pins_Enable(void)
 {
   LL_GPIO_SetPinMode(IR_SIGNALS_PORT, IR_MOD_PIN | IR_CARRIER_PIN, LL_GPIO_MODE_ALTERNATE);
@@ -97,14 +97,24 @@ void toggle_status_LED(void)
   LL_GPIO_TogglePin(STATUS_LED_PORT, STATUS_LED_PIN);
 }
 
-// void GPIO_set_status_LED(statusLEDColor color, statusLEDPattern pattern)
-// {
-//   desired_color = color;
-//   desired_pattern = pattern;
-// }
 
-// void GPIO_handle_status_LED(void)
-// {
-  
-
-// }
+// [CTRL1, CTRL0] | Color
+//          [0,0] | Nothing
+//          [0,1] | Green
+//          [1,0] | Yellow
+//          [1,1] | Red
+void GPIO_set_status_LED(statusLEDColor color)
+{
+  // reset color to nothing before switching
+  LL_GPIO_ResetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL1_PIN | STATUS_LED_CTRL0_PIN);
+  switch(color){
+    case GREEN:
+      LL_GPIO_SetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL0_PIN);
+      break;
+    case YELLOW:
+      LL_GPIO_SetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL1_PIN);
+      break;
+    default:
+      LL_GPIO_SetOutputPin(STATUS_LED_CTRLN_PORT, STATUS_LED_CTRL1_PIN | STATUS_LED_CTRL0_PIN);
+  }
+}

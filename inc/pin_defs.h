@@ -6,6 +6,11 @@
 #define STATUS_LED_CTRL0_PIN            LL_GPIO_PIN_8
 #define STATUS_LED_CTRL1_PIN            LL_GPIO_PIN_7
 #define STATUS_LED_CTRLN_PORT           GPIOB
+// [CTRL1, CTRL0] | Color
+//          [0,0] | Nothing
+//          [0,1] | Green
+//          [1,0] | Yellow
+//          [1,1] | Red
 
 #define IR_MOD_PIN                      LL_GPIO_PIN_6
 #define IR_CARRIER_PIN                  LL_GPIO_PIN_7

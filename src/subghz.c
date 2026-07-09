@@ -169,7 +169,7 @@ int32_t tx_cmd(uint32_t argc, char* argv[])
   subghz_write_tx_buffer(buf, buf_index);
   // subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
   tx_packet();
-  toggle_status_LED();
+  // toggle_status_LED();
 
 
 #endif
@@ -375,7 +375,7 @@ void SUBGHZ_Radio_IRQHandler(void)
     uint8_t rx_buf[16];
     uint32_t data_len;
     // do something
-    toggle_status_LED();
+    GPIO_set_status_LED(YELLOW);
     printfln_("packet received!");
     data_len = subghz_read_rx_buffer(rx_buf);
     subghz_radio_getPacketStatus(tmp_buf, false);
