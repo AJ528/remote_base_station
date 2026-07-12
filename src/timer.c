@@ -48,9 +48,9 @@ void timer_init(void)
   LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
   
   LL_TIM_StructInit(&TIM_InitStruct);
-  // TIM16 prescaler is set to 32 (0x20) because source clock is 32MHz
-  // Therefore TIM16 takes precisely 1us to count each number
-  TIM_InitStruct.Prescaler = 0x0020;   
+  // Effective clock = input clock / (prescaler + 1)
+  // Therefore, TIM16 prescaler is set to 31 so TIM16 takes precisely 1us to count each number
+  TIM_InitStruct.Prescaler = 31;   
   // autoreload value isn't known at init time. Will be defined later
   TIM_InitStruct.Autoreload = 0xffff;
   LL_TIM_Init(TIM16, &TIM_InitStruct);
