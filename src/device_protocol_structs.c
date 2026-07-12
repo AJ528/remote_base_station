@@ -58,7 +58,8 @@ const struct protocol NEC1 =
   .lead_out = {564},
   .lead_out_len = 1
  },
- .fmt_func = format_NEC1_command
+ .fmt_func = format_NEC1_command,
+ .fmt_func_RF = format_NEC1_command_RF
 };
 
 //IRP notation: {38.4k,564}<1,-1|1,-3>(8,-8,D:8,S:8,F:8,~F:8,1,^108m)+

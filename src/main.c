@@ -13,6 +13,9 @@
 #include "stm32wlxx_ll_utils.h"
 #include "stm32wlxx_ll_lpuart.h"
 
+// explicitly include stm32wlxx.h for access to DWT registers
+#include "stm32wlxx.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -40,8 +43,7 @@ int main(void)
 
 
 #if (RX_MODE == 1)
-  execute_command(&LHTV_PWR, false);
-  execute_command(&LHTV_PWR, false);
+  execute_command(&SB_PWR_TOG, false);
   // RX mode one-time set up
   continuous_rx_enable();
 #endif
@@ -52,7 +54,9 @@ int main(void)
   // uint32_t ref_time = get_tick();
   // const uint32_t delay_ms_time = 1000;
 
-  subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
+  // subghz_write_tx_buffer((uint8_t[]){0x02, 0x07, 0x07, 0x07}, 4);
+    subghz_write_tx_buffer((uint8_t[]){0x01, 0x00, 0xff, 0x40}, 4);
+
   tx_packet();
   // toggle_status_LED();
 #endif

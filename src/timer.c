@@ -144,9 +144,11 @@ void send_pulses(uint16_t *pulse_array, uint32_t array_size)
   // generate an update event. The DMA moves data to the preload registers
   LL_TIM_GenerateEvent_UPDATE(TIM16);
 
-  // for some reason I don't understand, only 1 update event is needed to load the registers properly
-  // since pre-load is enabled, my understanding is 2 update events were needed
-  // TODO: figure out why this is happening
+  // don't read TIM_EGR_UG here to determine when to trigger the next event
+  // that does not indicate when you can trigger another event
+  while(!(LL_TIM_IsActiveFlag_UPDATE(TIM16)));
+  // generate a second update event. First batch of data moves into active registers
+  LL_TIM_GenerateEvent_UPDATE(TIM16);
 
   // set the outputs active
   LL_TIM_OC_SetMode(TIM16, LL_TIM_CHANNEL_CH1, LL_TIM_OCMODE_PWM1);
@@ -172,7 +174,7 @@ void set_IR_frequency(uint16_t target_freq)
   uint32_t TM17_src_clk = clk_struct.PCLK2_Frequency;
   // find the count value that gets you closest to the target frequency
   uint16_t TIM17_period = find_best_count_value(TM17_src_clk, target_freq);
-  printfln_("Target Frequency is %d Hz, TIM17 will count to %d", target_freq, TIM17_period);
+  // printfln_("Target Frequency is %d Hz, TIM17 will count to %d", target_freq, TIM17_period);
   // update TIM17 period and keep the duty cycle at 50%
   LL_TIM_SetAutoReload(TIM17, TIM17_period);
   LL_TIM_OC_SetCompareCH1(TIM17, TIM17_period/2);
@@ -256,5 +258,4 @@ void DMA1_Channel1_IRQHandler(void)
   LL_TIM_EnableIT_UPDATE(TIM16);
   // enable TIM16 IRQ so there's an interrupt with the last pulse is sent
   NVIC_EnableIRQ(TIM16_IRQn);
-
 }

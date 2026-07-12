@@ -14,6 +14,7 @@ int32_t execute_command(const struct command *cmd, bool is_ditto);
 int32_t execute_command_RF(uint8_t protocol_id, uint8_t device_id, uint8_t subdevice_id, uint8_t function_code);
 
 int32_t format_NEC1_command(const struct command *cmd, bool is_ditto);
+int32_t format_NEC1_command_RF(uint8_t device_id, uint8_t subdevice_id, uint8_t function_code, bool is_ditto);
 int32_t format_NECx2_command(const struct command *cmd, bool is_ditto);
 int32_t format_NECx2_command_RF(uint8_t device_id, uint8_t subdevice_id, uint8_t function_code, bool is_ditto);
 

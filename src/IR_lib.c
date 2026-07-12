@@ -8,6 +8,9 @@
 
 #include "stm32wlxx_ll_utils.h"
 
+#include "mprintf.h"
+#include "stm32wlxx.h"
+
 #include <stdint.h>
 
 
@@ -42,11 +45,15 @@ static int32_t convert_time_array(const int16_t *enc_time_arr, uint32_t enc_time
 static int32_t add_extent_delay(uint32_t delay_us);
 static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num,
                                         uint16_t high_time_us);
-static void output_buffer_reset(void);
+static void output_buffer_init(void);
 
 int32_t execute_command(const struct command *cmd, bool is_ditto)
 {
   const struct protocol *protocol_used = cmd->device->prot_used;
+
+  // reset the buffer before use
+  // the reset function also puts a dummy entry in index 0 so the IRTIM works properly
+  output_buffer_init();
 
   set_IR_frequency(protocol_used->carrier_freq);
 
@@ -57,12 +64,11 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
   GPIO_IR_Pins_Enable();
 
   send_pulses(output_buffer, output_buffer_index);
+
   while(DMA_busy()){
     // enter LPM here?
-    LL_mDelay(5);
+    // LL_mDelay(1);
   }
-
-  output_buffer_reset();
 
   // disable the IR LEDs when not in use
   GPIO_IR_Pins_Disable();
@@ -73,6 +79,10 @@ int32_t execute_command(const struct command *cmd, bool is_ditto)
 int32_t execute_command_RF(uint8_t protocol_id, uint8_t device_id, uint8_t subdevice_id, uint8_t function_code)
 {
   const struct protocol *protocol_used = protocol_list[protocol_id];
+
+  // initialize the buffer before use
+  // the function resets the index and puts a dummy entry in index 0 so the IRTIM works properly
+  output_buffer_init();
 
   set_IR_frequency(protocol_used->carrier_freq);
 
@@ -85,10 +95,10 @@ int32_t execute_command_RF(uint8_t protocol_id, uint8_t device_id, uint8_t subde
   send_pulses(output_buffer, output_buffer_index);
   while(DMA_busy()){
     // enter LPM here?
-    LL_mDelay(50);
+    // LL_mDelay(1);
   }
 
-  output_buffer_reset();
+  output_buffer_init();
 
   // disable the IR LEDs when not in use
   GPIO_IR_Pins_Disable();
@@ -156,6 +166,58 @@ int32_t format_NEC1_command(const struct command *cmd, bool is_ditto)
     time_sum += result;
     // encode the inverse function
     result = encode_number(cur_protocol, ~(cmd->function), cmd->function_len);
+    CHECK(result);
+    time_sum += result;
+  }
+  // encode lead-out
+  result = convert_time_array(cur_char->lead_out, cur_char->lead_out_len, 0);
+  CHECK(result);
+  time_sum += result;
+
+  if(cur_char->extent_ms != 0){
+    int32_t extent_us = (cur_char->extent_ms) * 1000;
+    int32_t extent_remainder = extent_us - time_sum;
+    if(extent_remainder < 0){
+      //something has gone wrong
+      return (-1);
+    }
+    result = add_extent_delay(extent_remainder);
+    CHECK(result);
+  }
+  return (0);
+}
+
+int32_t format_NEC1_command_RF(uint8_t device_id, uint8_t subdevice_id, uint8_t function_code, bool is_ditto)
+{
+  int32_t result;
+  uint32_t time_sum = 0;
+  const struct protocol *const cur_protocol = &NEC1;
+  struct stream_char *cur_char;
+  // because NEC1 has a special way to handle dittos, determine which stream characteristics to use
+  if(is_ditto){
+    cur_char = &(cur_protocol->ditto_stream);
+  }else{
+    cur_char = &(cur_protocol->primary_stream); 
+  }
+  // encode lead-in
+  result = convert_time_array(cur_char->lead_in, cur_char->lead_in_len, 0);
+  CHECK(result);
+  time_sum += result;
+  if(is_ditto == false){
+    // encode device ID
+    result = encode_number(cur_protocol, device_id, 8);
+    CHECK(result);
+    time_sum += result;
+    // encode subdevice ID
+    result = encode_number(cur_protocol, subdevice_id, 8);
+    CHECK(result);
+    time_sum += result;
+    // encode function
+    result = encode_number(cur_protocol, function_code, 8);
+    CHECK(result);
+    time_sum += result;
+    // encode the inverse function
+    result = encode_number(cur_protocol, ~(function_code), 8);
     CHECK(result);
     time_sum += result;
   }
@@ -440,7 +502,13 @@ static int32_t output_buffer_add_entry(uint16_t period_us, uint16_t repeat_num, 
   }
 }
 
-static void output_buffer_reset(void)
+static void output_buffer_init(void)
 {
   output_buffer_index = 0;
+  /*
+  There is a bug where IRTIM will output high until it sees
+  the first edge from TIM16 OC1. The workaround is to always
+  have the first buffer entry be a dummy one that cycles TIM16.
+  */
+  output_buffer_add_entry(1, 0, 0);
 }
